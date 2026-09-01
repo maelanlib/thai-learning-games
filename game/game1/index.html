@@ -117,7 +117,6 @@
             clip-path: polygon(
                 0 100%, 0 40%, 14px 0, 24px 40%, 24px 100%
             );
-            /* Pointed tops for picket fence */
             mask: repeating-linear-gradient(90deg, #000 0px, #000 27px, transparent 27px, transparent 42px);
             -webkit-mask: repeating-linear-gradient(90deg, #000 0px, #000 27px, transparent 27px, transparent 42px);
         }
@@ -166,13 +165,12 @@
 </head>
 <body class="bg-green-200">
 
-    <!-- 2D Cartoon Farm Decorative Frame Overlay -->
     <div class="farm-frame-top"></div>
     <div class="farm-frame-side farm-frame-left"></div>
     <div class="farm-frame-side farm-frame-right"></div>
     <div class="farm-picket-fence"></div>
 
-    <!-- Video Element (Hidden) -->
+    <!-- Video Element (Hidden from display, kept for MediaPipe hand tracking) -->
     <video id="webcam" class="hidden" autoplay playsinline></video>
 
     <!-- Main Game Canvas -->
@@ -272,7 +270,6 @@
     </div>
 
     <script>
-        // --- 1. Data & Assets Configuration ---
         const consonantsData = [
             { char: 'ก', name: 'ก ไก่', emoji: '🐔' },
             { char: 'ข', name: 'ข ไข่', emoji: '🥚' },
@@ -289,12 +286,11 @@
             { char: 'อ', name: 'อ อ่าง', emoji: '🛁' }
         ];
 
-        // Load Requested Wicker Basket Image
+        // Load Wicker Basket Image
         const basketImage = new Image();
         basketImage.crossOrigin = "anonymous";
         basketImage.src = 'https://static.vecteezy.com/system/resources/thumbnails/009/660/156/small/watercolor-wicker-basket-illustration-png.png';
 
-        // --- 2. Global Variables ---
         let gameState = 'loading'; // loading, start, playing, end
         let score = 0;
         let timeLeft = 60;
@@ -306,6 +302,7 @@
 
         // Hand Tracking Data
         let activePunches = [];
+        let rawHandLandmarksList = []; // For rendering skeletons
 
         // Fallback Mouse/Touch Data
         let pointerState = { isDown: false, x: 0, y: 0 };
@@ -322,7 +319,6 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // --- 3. Game Classes ---
         class Item {
             constructor() {
                 let isTarget = Math.random() < 0.4 && currentMission != null;
@@ -337,7 +333,7 @@
                 this.x = margin + Math.random() * (canvas.width - margin * 2);
                 this.y = margin + 80 + Math.random() * (canvas.height * 0.45);
                 
-                // Floating Velocity X & Y (Bouncing around in 2D space)
+                // Floating Velocity X & Y
                 const speed = 1.2 + Math.random() * 1.6;
                 const angle = Math.random() * Math.PI * 2;
                 this.speedX = Math.cos(angle) * speed;
@@ -345,15 +341,12 @@
                 if (Math.abs(this.speedX) < 0.5) this.speedX = 1.0;
                 if (Math.abs(this.speedY) < 0.5) this.speedY = -1.0;
                 
-                // Rotation & Float Oscillation
                 this.rotation = (Math.random() - 0.5) * 0.3;
                 this.rotSpeed = (Math.random() - 0.5) * 0.015;
                 
                 this.isGrabbed = false;
                 this.grabbedBy = null;
                 this.scale = 1;
-                
-                // 2D Farm Tile Styling Type (Wooden Signboard / Egg Badge)
                 this.badgeType = Math.random() > 0.5 ? 'wood' : 'egg';
             }
 
@@ -364,7 +357,6 @@
                     this.rotation += this.rotSpeed;
                     this.scale = 1;
 
-                    // Bounce off horizontal screen bounds
                     const minX = this.radius + 25;
                     const maxX = canvas.width - this.radius - 25;
                     if (this.x <= minX) {
@@ -375,7 +367,6 @@
                         this.speedX *= -1;
                     }
 
-                    // Bounce off vertical screen bounds (keep inside floating area)
                     const minY = this.radius + 75;
                     const maxY = canvas.height - this.radius - 120;
                     if (this.y <= minY) {
@@ -400,14 +391,11 @@
                 const r = this.radius;
 
                 if (this.badgeType === 'wood') {
-                    // --- 2D Cartoon Wooden Signboard ---
-                    // Shadow
                     ctx.beginPath();
                     ctx.roundRect(-r, -r + 4, r * 2, r * 2, 18);
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
                     ctx.fill();
 
-                    // Main Wood Body
                     ctx.beginPath();
                     ctx.roundRect(-r, -r, r * 2, r * 2, 18);
                     ctx.fillStyle = '#fef3c7';
@@ -416,21 +404,17 @@
                     ctx.strokeStyle = '#78350f';
                     ctx.stroke();
 
-                    // Inner border line
                     ctx.beginPath();
                     ctx.roundRect(-r + 6, -r + 6, (r - 6) * 2, (r - 6) * 2, 12);
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = '#d97706';
                     ctx.stroke();
                 } else {
-                    // --- 2D Cartoon Farm Egg/Badge ---
-                    // Shadow
                     ctx.beginPath();
                     ctx.ellipse(0, 5, r, r * 1.15, 0, 0, Math.PI * 2);
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
                     ctx.fill();
 
-                    // Main Egg Shape
                     ctx.beginPath();
                     ctx.ellipse(0, 0, r, r * 1.15, 0, 0, Math.PI * 2);
                     ctx.fillStyle = '#ffffff';
@@ -439,21 +423,18 @@
                     ctx.strokeStyle = '#f59e0b';
                     ctx.stroke();
 
-                    // Inner Shine Gradient/Highlight
                     ctx.beginPath();
                     ctx.arc(-r * 0.3, -r * 0.4, r * 0.25, 0, Math.PI * 2);
                     ctx.fillStyle = 'rgba(254, 243, 199, 0.8)';
                     ctx.fill();
                 }
 
-                // If Grabbed Glow Border
                 if (this.isGrabbed) {
                     ctx.lineWidth = 5;
                     ctx.strokeStyle = '#22c55e';
                     ctx.stroke();
                 }
 
-                // Render Consonant Text
                 ctx.fillStyle = '#78350f';
                 ctx.font = `800 ${r * 0.95}px 'Mali', cursive`;
                 ctx.textAlign = 'center';
@@ -462,7 +443,6 @@
                 ctx.shadowBlur = 4;
                 ctx.fillText(this.data.char, 0, -r * 0.05);
 
-                // Small Emoji Decor at Bottom Right
                 ctx.shadowBlur = 0;
                 ctx.font = `${r * 0.5}px Arial`;
                 ctx.fillText(this.data.emoji, r * 0.45, r * 0.45);
@@ -471,7 +451,6 @@
             }
         }
 
-        // --- 4. Core Game Logic ---
         function setRandomMission() {
             currentMission = consonantsData[Math.floor(Math.random() * consonantsData.length)];
             document.getElementById('missionDisplay').innerText = currentMission.name;
@@ -522,33 +501,75 @@
             document.getElementById('finalScore').innerText = score;
         }
 
-        // --- 5. Rendering & Physics Loop ---
+        function drawCartoonFarmBackground() {
+            // Sky Gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
+            skyGrad.addColorStop(0, '#7dd3fc');
+            skyGrad.addColorStop(1, '#bae6fd');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Fluffy Cartoon Clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            const time = Date.now() * 0.001;
+            const cloudOffset1 = (time * 15) % (canvas.width + 200) - 100;
+            const cloudOffset2 = (time * 10 + 300) % (canvas.width + 300) - 150;
+
+            // Cloud 1
+            ctx.beginPath();
+            ctx.arc(cloudOffset1, 80, 35, 0, Math.PI * 2);
+            ctx.arc(cloudOffset1 + 30, 65, 45, 0, Math.PI * 2);
+            ctx.arc(cloudOffset1 + 70, 80, 35, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cloud 2
+            ctx.beginPath();
+            ctx.arc(cloudOffset2, 140, 25, 0, Math.PI * 2);
+            ctx.arc(cloudOffset2 + 25, 125, 35, 0, Math.PI * 2);
+            ctx.arc(cloudOffset2 + 55, 140, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rolling Hills / Farm Background
+            ctx.fillStyle = '#4ade80';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width * 0.2, canvas.height * 0.55, canvas.width * 0.6, 180, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width * 0.8, canvas.height * 0.6, canvas.width * 0.7, 200, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ground Grass
+            const groundGrad = ctx.createLinearGradient(0, canvas.height * 0.5, 0, canvas.height);
+            groundGrad.addColorStop(0, '#86efac');
+            groundGrad.addColorStop(1, '#4ade80');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, canvas.height * 0.55, canvas.width, canvas.height * 0.45);
+        }
+
         function drawBasket() {
             const basketWidth = Math.min(canvas.width * 0.35, 240);
             const basketHeight = basketWidth * 0.75;
             const basketX = (canvas.width - basketWidth) / 2;
             const basketY = canvas.height - basketHeight - 15;
 
-            // Draw Basket Target Zone Highlight Glow
             ctx.save();
             ctx.beginPath();
             ctx.ellipse(canvas.width / 2, canvas.height - 30, basketWidth * 0.6, 25, 0, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(253, 224, 71, 0.35)';
+            ctx.fillStyle = 'rgba(253, 224, 71, 0.45)';
             ctx.fill();
             ctx.restore();
 
-            // Draw the requested Wicker Basket Image if loaded
             if (basketImage.complete && basketImage.naturalWidth !== 0) {
                 ctx.drawImage(basketImage, basketX, basketY, basketWidth, basketHeight);
             } else {
-                // Fallback Wicker Basket drawing if image fails to load
                 ctx.fillStyle = '#b45309';
                 ctx.beginPath();
                 ctx.roundRect(basketX, basketY + 30, basketWidth, basketHeight - 30, 20);
                 ctx.fill();
             }
 
-            // Label on Basket
             ctx.fillStyle = '#78350f';
             ctx.font = '800 20px Mali';
             ctx.textAlign = 'center';
@@ -564,11 +585,9 @@
             return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
         }
 
-        // --- 6. AI & Input Interaction Logic ---
         function handleInteractions(basketY) {
             let inputs = [];
             
-            // Hand Inputs
             activePunches.forEach(hand => {
                 inputs.push({
                     id: hand.id,
@@ -579,7 +598,6 @@
                 });
             });
 
-            // Pointer / Touch Inputs
             if (pointerState.isDown) {
                 inputs.push({
                     id: 'pointer',
@@ -590,40 +608,56 @@
                 });
             }
 
-            items.forEach((item, index) => {
-                let grabbedThisFrame = false;
+            let currentlyGrabbedItem = items.find(i => i.isGrabbed);
 
-                for (let input of inputs) {
-                    const dist = calculateDistance(input.x, input.y, item.x, item.y);
-                    
-                    if (dist < item.radius + 25) {
-                        if (input.isGrabbing) {
-                            if (!item.isGrabbed || item.grabbedBy === input.id) {
-                                item.isGrabbed = true;
-                                item.grabbedBy = input.id;
-                                item.x = input.x;
-                                item.y = input.y;
-                                grabbedThisFrame = true;
-                                break;
-                            }
-                        }
-                    }
+            inputs.forEach(input => {
+                if (!input.isGrabbing) return;
+
+                let itemGrabbedByThisInput = items.find(i => i.isGrabbed && i.grabbedBy === input.id);
+                if (itemGrabbedByThisInput) {
+                    itemGrabbedByThisInput.x = input.x;
+                    itemGrabbedByThisInput.y = input.y;
+                    return;
                 }
 
-                // Handle Drop into Basket or Release to continue floating
-                if (item.isGrabbed && !grabbedThisFrame) {
-                    let wasReleaserGrabbing = false;
+                if (!currentlyGrabbedItem) {
+                    let closestItem = null;
+                    let minDist = Infinity;
+
+                    items.forEach(item => {
+                        if (!item.isGrabbed) {
+                            const dist = calculateDistance(input.x, input.y, item.x, item.y);
+                            if (dist < item.radius + 35 && dist < minDist) {
+                                minDist = dist;
+                                closestItem = item;
+                            }
+                        }
+                    });
+
+                    if (closestItem) {
+                        closestItem.isGrabbed = true;
+                        closestItem.grabbedBy = input.id;
+                        closestItem.x = input.x;
+                        closestItem.y = input.y;
+                        currentlyGrabbedItem = closestItem;
+                    }
+                }
+            });
+
+            items.forEach((item, index) => {
+                if (item.isGrabbed) {
+                    let isStillGrabbing = false;
                     for (let input of inputs) {
                         if (input.id === item.grabbedBy && input.isGrabbing) {
-                            wasReleaserGrabbing = true;
+                            isStillGrabbing = true;
+                            break;
                         }
                     }
 
-                    if (!wasReleaserGrabbing) {
+                    if (!isStillGrabbing) {
                         item.isGrabbed = false;
                         item.grabbedBy = null;
 
-                        // Reset floating velocities upon release
                         item.speedX = (Math.random() - 0.5) * 2.5;
                         item.speedY = (Math.random() - 0.5) * 2.5;
 
@@ -634,7 +668,6 @@
                                 items = [];
                                 setRandomMission();
                                 
-                                // Flash success screen feedback
                                 ctx.fillStyle = 'rgba(74, 222, 128, 0.4)';
                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                             } else {
@@ -646,35 +679,10 @@
             });
         }
 
-        // --- 7. Main Game Loop ---
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Mirror Webcam Feed
-            if (videoElement.readyState >= 2) {
-                ctx.save();
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-                
-                const vRatio = videoElement.videoWidth / videoElement.videoHeight;
-                const cRatio = canvas.width / canvas.height;
-                let drawWidth, drawHeight, offsetX, offsetY;
-
-                if (vRatio > cRatio) {
-                    drawHeight = canvas.height;
-                    drawWidth = canvas.height * vRatio;
-                    offsetX = (drawWidth - canvas.width) / 2;
-                    offsetY = 0;
-                } else {
-                    drawWidth = canvas.width;
-                    drawHeight = canvas.width / vRatio;
-                    offsetX = 0;
-                    offsetY = (drawHeight - canvas.height) / 2;
-                }
-
-                ctx.drawImage(videoElement, -offsetX, -offsetY, drawWidth, drawHeight);
-                ctx.restore();
-            }
+            drawCartoonFarmBackground();
 
             if (gameState === 'playing') {
                 const basketY = drawBasket();
@@ -687,23 +695,39 @@
                 handleInteractions(basketY);
             }
 
-            // Draw Pinch Hand Cursor Effect
+            // Draw Hand Skeletons & Cursors clearly so children can easily spot their hands
+            rawHandLandmarksList.forEach(landmarks => {
+                ctx.save();
+                try {
+                    // Bright cyan & yellow glowing lines for hand connections
+                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: 'rgba(56, 189, 248, 0.95)', lineWidth: 6});
+                    drawLandmarks(ctx, landmarks, {color: '#facc15', lineWidth: 3, radius: 7});
+                } catch(e) {}
+                ctx.restore();
+            });
+
             activePunches.forEach(hand => {
                 ctx.beginPath();
-                ctx.arc(hand.x, hand.y, hand.isPinching ? 18 : 10, 0, 2 * Math.PI);
-                ctx.fillStyle = hand.isPinching ? 'rgba(250, 204, 21, 0.9)' : 'rgba(255, 255, 255, 0.6)';
+                ctx.arc(hand.x, hand.y, hand.isPinching ? 28 : 16, 0, 2 * Math.PI);
+                ctx.fillStyle = hand.isPinching ? 'rgba(34, 197, 94, 0.95)' : 'rgba(250, 204, 21, 0.85)';
                 ctx.fill();
-                if(hand.isPinching){
-                    ctx.strokeStyle = '#d97706';
-                    ctx.lineWidth = 4;
-                    ctx.stroke();
-                }
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                // Draw pinch status text helper
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '700 14px Mali';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 4;
+                ctx.fillText(hand.isPinching ? '👌 จับอยู่!' : '🖐️ แบมือ', hand.x, hand.y - 32);
+                ctx.shadowBlur = 0;
             });
 
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
-        // --- 8. MediaPipe Setup ---
         const hands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
@@ -717,37 +741,30 @@
 
         hands.onResults((results) => {
             activePunches = [];
+            rawHandLandmarksList = [];
 
             if (results.multiHandLandmarks) {
                 for (let index = 0; index < results.multiHandLandmarks.length; index++) {
                     const landmarks = results.multiHandLandmarks[index];
                     const handedness = results.multiHandedness[index].label;
                     
-                    const mirroredLandmarks = landmarks.map(lm => ({
-                        x: 1 - lm.x,
-                        y: lm.y,
+                    const screenLandmarks = landmarks.map(lm => ({
+                        x: (1 - lm.x) * canvas.width,
+                        y: lm.y * canvas.height,
                         z: lm.z
                     }));
-                    
-                    try {
-                         drawConnectors(ctx, mirroredLandmarks, HAND_CONNECTIONS, {color: '#fef08a', lineWidth: 3});
-                         drawLandmarks(ctx, mirroredLandmarks, {color: '#22c55e', lineWidth: 1, radius: 4});
-                    } catch(e) {}
 
-                    const thumb = mirroredLandmarks[4];
-                    const indexFinger = mirroredLandmarks[8];
+                    rawHandLandmarksList.push(screenLandmarks);
 
-                    const thumbX = thumb.x * canvas.width;
-                    const thumbY = thumb.y * canvas.height;
-                    const indexX = indexFinger.x * canvas.width;
-                    const indexY = indexFinger.y * canvas.height;
+                    const thumb = screenLandmarks[4];
+                    const indexFinger = screenLandmarks[8];
 
-                    const distance = calculateDistance(thumbX, thumbY, indexX, indexY);
-                    const pinchThreshold = canvas.width * 0.05; 
+                    const distance = calculateDistance(thumb.x, thumb.y, indexFinger.x, indexFinger.y);
+                    const pinchThreshold = canvas.width * 0.055; 
                     const isPinching = distance < pinchThreshold;
 
-                    const midX = (thumbX + indexX) / 2;
-                    const midY = (thumbY + indexY) / 2;
+                    const midX = (thumb.x + indexFinger.x) / 2;
+                    const midY = (thumb.y + indexFinger.y) / 2;
 
                     activePunches.push({
                         id: handedness + index,
@@ -771,7 +788,6 @@
             height: 480
         });
 
-        // --- 9. Initialize & Event Listeners ---
         async function initSetup() {
             try {
                 await camera.start();
@@ -795,7 +811,6 @@
             gameState = 'start';
         }
 
-        // Mouse & Touch Handlers
         function updatePointer(e, isDown) {
             e.preventDefault();
             pointerState.isDown = isDown;
@@ -822,7 +837,6 @@
         document.getElementById('startBtn').addEventListener('click', startGame);
         document.getElementById('restartBtn').addEventListener('click', startGame);
         
-        // Save Certificate Screenshot
         document.getElementById('saveBtn').addEventListener('click', () => {
             const certCard = document.getElementById('certificateCard');
             const buttons = document.getElementById('certButtons');
