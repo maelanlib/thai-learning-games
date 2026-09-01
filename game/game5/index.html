@@ -1,404 +1,703 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกมล่าคำไทย (Thai Word Hunter)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&family=Mitr:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f0f8ff; /* Fallback background */
+            /* Simulate a camera feed background for "AR" feel */
+            background-image: url('https://images.unsplash.com/photo-1542204165-65bf26472b9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            touch-action: none; /* Prevent default touch actions like scrolling */
+        }
 
-<title>Pixel Folder Tree</title>
+        h1, h2, h3, .heading-font {
+            font-family: 'Mitr', sans-serif;
+        }
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📁</text></svg>">
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            /* Add a slight blur to background to make letters pop more */
+            backdrop-filter: blur(2px);
+        }
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through to letters */
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
 
-body{
-margin:0;
-background:#101018;
-color:white;
-font-family:'Press Start 2P',monospace;
-}
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.5rem;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+        }
 
-.container{
-max-width:950px;
-margin:30px auto;
-background:#1b1b2f;
-border:4px solid #7c5cff;
-padding:25px;
-box-shadow:8px 8px 0 #000;
-}
+        .stat-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #1e3a8a; /* Tailwind blue-900 */
+            border: 2px solid #60a5fa; /* Tailwind blue-400 */
+        }
 
-h1{
-text-align:center;
-color:#ffd166;
-font-size:20px;
-}
+        .target-word-container {
+            text-align: center;
+            margin-top: 2rem;
+            pointer-events: auto; /* Allow interaction if needed later */
+        }
 
-input{
-display:none;
-}
+        #target-word-display {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #047857; /* Tailwind emerald-700 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            border: 3px solid #34d399; /* Tailwind emerald-400 */
+            letter-spacing: 0.2em;
+        }
 
-.btn{
-display:block;
-background:#7c5cff;
-padding:15px;
-text-align:center;
-cursor:pointer;
-box-shadow:4px 4px 0 #000;
-margin-bottom:15px;
-}
+        .hint-text {
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
 
-button{
-width:100%;
-padding:15px;
-background:#00b894;
-border:0;
-color:white;
-font-family:inherit;
-cursor:pointer;
-box-shadow:4px 4px 0 #000;
-margin-bottom:20px;
-}
+        .bottom-bar {
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+        }
 
-#tree{
-background:#080812;
-border:3px solid #333;
-padding:20px;
-line-height:1.8;
-font-size:13px;
-white-space:pre;
-}
+        #collected-letters {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 4rem; /* Placeholder height */
+        }
 
-.folder{
-color:#ffd166;
-cursor:pointer;
-}
+        .collected-letter-slot {
+            width: 3.5rem;
+            height: 4rem;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px dashed rgba(255, 255, 255, 0.6);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+        
+        .collected-letter-slot.filled {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e3a8a;
+            border: 2px solid #3b82f6; /* blue-500 */
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
 
-.file{
-color:#8be9fd;
-}
+        #ar-world {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto; /* Critical for catching clicks/taps */
+            overflow: hidden;
+        }
 
-#popup{
-position:fixed;
-top:30px;
-left:50%;
-transform:translateX(-50%);
-background:#00b894;
-padding:15px 25px;
-border:4px solid #000;
-box-shadow:6px 6px 0 #000;
-display:none;
-z-index:99;
-}
-</style>
+        .floating-letter {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle at 30% 30%, #fbbf24, #d97706); /* amber-400 to amber-600 */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            box-shadow: 
+                0 10px 15px -3px rgba(0, 0, 0, 0.3),
+                inset 0 4px 6px rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            user-select: none;
+            /* Animation for floating effect */
+            animation: float 4s ease-in-out infinite, pulse 2s infinite alternate;
+            border: 3px solid #fef3c7; /* amber-100 */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
 
+        .floating-letter:active {
+            transform: scale(0.9);
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); }
+            100% { box-shadow: 0 5px 25px rgba(245, 158, 11, 0.8); }
+        }
+
+        @keyframes popOut {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .popping {
+            animation: popOut 0.4s forwards !important;
+            pointer-events: none;
+        }
+        
+        @keyframes successWord {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); color: #10b981; } /* emerald-500 */
+        }
+        
+        .word-success {
+            animation: successWord 0.5s ease-in-out 2;
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            color: white;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            font-family: 'Mitr', sans-serif;
+            font-size: 1.5rem;
+            padding: 1rem 3rem;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -3px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+        }
+
+        .game-title {
+            font-size: 4rem;
+            font-weight: 800;
+            background: -webkit-linear-gradient(#fcd34d, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
+        }
+
+        /* Particle effect canvas */
+        #confetti-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 40;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
-
-<h1>📁 PIXEL FOLDER TREE</h1>
-
-<label class="btn">
-📂 SELECT FOLDER
-<input id="folder" type="file" webkitdirectory multiple>
-</label>
-
-<button onclick="copyTree()">
-📋 COPY STRUCTURE
-</button>
-
-<div id="tree">
-ยังไม่ได้เลือกโฟลเดอร์...
-</div>
-
-</div>
-
-<div id="popup"></div>
-
-
-<script>
-
-let treeData={};
-let structure="";
-
-const input=document.getElementById("folder");
-const tree=document.getElementById("tree");
-
-
-input.addEventListener("change",()=>{
-
-let files=[...input.files];
-
-treeData={};
-
-
-files.forEach(file=>{
-
-let path=file.webkitRelativePath.split("/");
-let current=treeData;
-
-
-path.forEach((part,index)=>{
-
-if(!current[part]){
-
-current[part]=
-index===path.length-1
-?null
-:{};
-
-}
-
-if(current[part]!==null){
-
-current=current[part];
-
-}
-
-});
-
-});
-
-
-renderTree();
-
-});
-
-
-
-function getIcon(name,data){
-
-if(data!==null)
-return "📁";
-
-
-let ext=name.split(".").pop().toLowerCase();
-
-
-if(["png","jpg","jpeg","webp","gif"].includes(ext))
-return "🖼️";
-
-
-if(["js","html","css"].includes(ext))
-return "💻";
-
-
-if(["json","tmj","tmx"].includes(ext))
-return "⚙️";
-
-
-return "📄";
-
-}
-
-
-
-function renderTree(){
-
-tree.innerHTML="";
-
-
-let keys=Object.keys(treeData);
-
-
-keys.forEach((key,index)=>{
-
-createNode(
-key,
-treeData[key],
-tree,
-"",
-index===keys.length-1
-);
-
-});
-
-
-}
-
-
-
-function createNode(name,data,parent,prefix,last){
-
-
-let row=document.createElement("div");
-
-let branch=
-prefix+(last?"└── ":"├── ");
-
-
-row.textContent=
-branch+
-getIcon(name,data)+" "+name;
-
-
-
-parent.appendChild(row);
-
-
-
-if(data!==null){
-
-
-row.className="folder";
-
-
-let children=document.createElement("div");
-
-parent.appendChild(children);
-
-
-
-row.onclick=()=>{
-
-
-if(children.style.display==="none"){
-
-children.style.display="block";
-
-row.textContent=
-branch+"📂 "+name;
-
-}else{
-
-children.style.display="none";
-
-row.textContent=
-branch+"📁 "+name;
-
-}
-
-};
-
-
-
-let keys=Object.keys(data);
-
-
-keys.forEach((key,index)=>{
-
-
-createNode(
-
-key,
-data[key],
-children,
-prefix+(last?"    ":"│   "),
-index===keys.length-1
-
-);
-
-
-});
-
-
-}else{
-
-
-row.className="file";
-
-
-}
-
-
-
-}
-
-
-
-function buildCopy(obj,prefix=""){
-
-
-let text="";
-
-
-let keys=Object.keys(obj);
-
-
-keys.forEach((key,index)=>{
-
-
-let last=index===keys.length-1;
-
-let data=obj[key];
-
-
-text+=
-prefix+
-(last?"└── ":"├── ")
-+
-getIcon(key,data)
-+" "
-+key+"\n";
-
-
-if(data!==null){
-
-text+=buildCopy(
-
-data,
-
-prefix+(last?"    ":"│   ")
-
-);
-
-}
-
-
-});
-
-
-return text;
-
-}
-
-
-
-
-function copyTree(){
-
-
-if(Object.keys(treeData).length===0){
-
-showPopup("❌ ยังไม่ได้เลือก Folder");
-
-return;
-
-}
-
-
-structure=buildCopy(treeData);
-
-
-navigator.clipboard.writeText(structure);
-
-
-showPopup("✅ Copy Structure แล้ว!");
-
-}
-
-
-
-
-function showPopup(msg){
-
-let p=document.getElementById("popup");
-
-p.textContent=msg;
-
-p.style.display="block";
-
-
-setTimeout(()=>{
-
-p.style.display="none";
-
-},2000);
-
-
-}
-
-</script>
-
+    <div id="game-container">
+        
+        <!-- AR World where letters will spawn -->
+        <div id="ar-world"></div>
+
+        <!-- Canvas for victory effects -->
+        <canvas id="confetti-canvas"></canvas>
+
+        <!-- UI Layer (Stats, Target Word, Inventory) -->
+        <div id="ui-layer">
+            
+            <!-- Top Bar: Score and Timer -->
+            <div class="top-bar">
+                <div class="stat-box">คะแนน: <span id="score">0</span></div>
+                <div class="stat-box">เวลา: <span id="timer">60</span>s</div>
+            </div>
+
+            <!-- Target Word Display -->
+            <div class="target-word-container">
+                <div id="target-word-display" class="heading-font">_ _ _</div>
+                <div class="hint-text" id="word-hint">คำใบ้: หาตัวอักษรมาเติมให้เต็ม</div>
+            </div>
+
+            <!-- Bottom Bar: Collected Letters -->
+            <div class="bottom-bar">
+                <p class="text-white mb-2 font-semibold">ตัวอักษรที่เก็บได้</p>
+                <div id="collected-letters">
+                    <!-- Slots will be injected here by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay-screen">
+            <h1 class="game-title heading-font">ล่าคำไทย</h1>
+            <p class="text-xl max-w-md px-4">แตะที่ตัวอักษรที่ลอยอยู่รอบๆ ตัวคุณ เพื่อสะกดคำให้ถูกต้องตามคำใบ้ ทำคะแนนให้ได้มากที่สุดในเวลา 60 วินาที!</p>
+            <button id="start-btn" class="btn">เริ่มเล่น</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay-screen hidden">
+            <h1 class="game-title heading-font" style="font-size: 3rem;">หมดเวลา!</h1>
+            <p class="text-2xl mt-4">คุณทำคะแนนได้</p>
+            <p class="text-6xl font-bold text-yellow-400 my-4 heading-font" id="final-score">0</p>
+            <button id="restart-btn" class="btn">เล่นอีกครั้ง</button>
+        </div>
+
+    </div>
+
+    <script>
+        // Game Vocabulary Database
+        const vocabulary = [
+            { word: "สวัสดี", hint: "คำทักทายของคนไทย" },
+            { word: "ขอบคุณ", hint: "คำกล่าวแสดงความรู้สึกซาบซึ้ง" },
+            { word: "อาหาร", hint: "สิ่งที่เรากินเพื่อดำรงชีวิต" },
+            { word: "ครอบครัว", hint: "กลุ่มคนที่มีความสัมพันธ์กันทางสายเลือด" },
+            { word: "ความสุข", hint: "ความรู้สึกดีใจ อิ่มเอมใจ" },
+            { word: "โรงเรียน", hint: "สถานที่สำหรับศึกษาเล่าเรียน" },
+            { word: "ธรรมชาติ", hint: "สิ่งที่เกิดขึ้นเองตามธรรมดาของโลก" },
+            { word: "หนังสือ", hint: "สิ่งตีพิมพ์ที่เย็บเป็นเล่ม" },
+            { word: "ประเทศไทย", hint: "ชื่อประเทศของเรา" },
+            { word: "รอยยิ้ม", hint: "อาการที่แสดงความสุขบนใบหน้า" }
+        ];
+
+        // Thai characters for random filler spawning
+        const thaiConsonants = "กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ";
+        const thaiVowels = "ะาิีึืุูเแโใไ"; // Simplified for this game
+
+        // Game State Variables
+        let currentWordObj = null;
+        let targetWord = "";
+        let collectedWord = "";
+        let score = 0;
+        let timeLeft = 60;
+        let gameInterval;
+        let spawnInterval;
+        let isPlaying = false;
+
+        // DOM Elements
+        const arWorld = document.getElementById('ar-world');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const targetWordDisplay = document.getElementById('target-word-display');
+        const hintDisplay = document.getElementById('word-hint');
+        const collectedLettersContainer = document.getElementById('collected-letters');
+        
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function initGame() {
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
+            
+            // Handle window resize for letter bounds
+            window.addEventListener('resize', () => {
+                if(isPlaying) {
+                    // Could optionally reposition letters if they get lost outside bounds
+                }
+            });
+        }
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            score = 0;
+            timeLeft = 60;
+            isPlaying = true;
+            updateScore();
+            updateTimerDisplay();
+            
+            // Clear any existing letters
+            arWorld.innerHTML = '';
+            
+            loadNextWord();
+            
+            gameInterval = setInterval(updateTimer, 1000);
+            
+            // Spawn letters periodically
+            spawnInterval = setInterval(spawnLetter, 800);
+            
+            // Initial spawn
+            for(let i=0; i<5; i++) spawnLetter();
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearInterval(spawnInterval);
+            
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.classList.remove('hidden');
+            
+            // Stop letter animations
+            const letters = document.querySelectorAll('.floating-letter');
+            letters.forEach(l => {
+                l.style.animation = 'none';
+            });
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.textContent = timeLeft;
+            if(timeLeft <= 10) {
+                timerDisplay.style.color = '#ef4444'; // red-500
+            } else {
+                timerDisplay.style.color = '#1e3a8a'; // back to normal
+            }
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = score;
+        }
+
+        function loadNextWord() {
+            // Pick a random word from vocabulary
+            const randomIndex = Math.floor(Math.random() * vocabulary.length);
+            currentWordObj = vocabulary[randomIndex];
+            
+            // Thai text splitting can be complex due to compound characters (vowels/tones)
+            // For this simple game, we will treat each character visually as a distinct target.
+            // Ideally, we'd use a grapheme splitter, but standard string split works okay for simple words without complex tones if we treat them carefully.
+            // To make it playable, let's just use standard string split and ensure vocab is simple.
+            targetWord = Array.from(currentWordObj.word); // Splits into array of characters, handles most basic Thai well enough for a mini-game
+            
+            collectedWord = "";
+            
+            hintDisplay.textContent = `คำใบ้: ${currentWordObj.hint}`;
+            
+            renderTargetDisplay();
+            renderCollectedSlots();
+            
+            // Ensure letters of the target word are available in the world
+            spawnTargetLetters();
+        }
+
+        function renderTargetDisplay() {
+            // Create a display string with _ for missing letters
+            let displayHtml = '';
+            for (let i = 0; i < targetWord.length; i++) {
+                if (i < collectedWord.length) {
+                    displayHtml += `<span style="color: #047857;">${collectedWord[i]}</span>`; // Filled
+                } else {
+                    displayHtml += `<span style="color: #9ca3af;">_</span>`; // Empty
+                }
+                if(i < targetWord.length - 1) displayHtml += ' ';
+            }
+            targetWordDisplay.innerHTML = displayHtml;
+        }
+
+        function renderCollectedSlots() {
+            collectedLettersContainer.innerHTML = '';
+            for (let i = 0; i < targetWord.length; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'collected-letter-slot';
+                if (i < collectedWord.length) {
+                    slot.textContent = collectedWord[i];
+                    slot.classList.add('filled');
+                }
+                collectedLettersContainer.appendChild(slot);
+            }
+        }
+
+        function spawnTargetLetters() {
+            // Guarantee that at least some letters of the target word are spawned immediately
+            targetWord.forEach(char => {
+                spawnSpecificLetter(char);
+            });
+        }
+
+        function getRandomThaiChar() {
+            // 70% chance to spawn a character needed for the word to keep game moving
+            if (Math.random() > 0.3 && targetWord && collectedWord.length < targetWord.length) {
+                // Find next needed character
+                return targetWord[collectedWord.length];
+            }
+            // Otherwise random consonant or vowel
+            const source = Math.random() > 0.2 ? thaiConsonants : thaiVowels;
+            return source[Math.floor(Math.random() * source.length)];
+        }
+
+        function spawnLetter() {
+            if (!isPlaying) return;
+            
+            // Limit max letters on screen for performance and clarity
+            if (arWorld.childElementCount > 15) {
+                // Remove oldest randomly
+                const letters = arWorld.children;
+                if(letters.length > 0) arWorld.removeChild(letters[0]);
+            }
+
+            const char = getRandomThaiChar();
+            spawnSpecificLetter(char);
+        }
+
+        function spawnSpecificLetter(char) {
+            const letterEl = document.createElement('div');
+            letterEl.className = 'floating-letter';
+            letterEl.textContent = char;
+
+            // Random position (keep within bounds)
+            const size = 60;
+            const x = Math.random() * (window.innerWidth - size);
+            // Spawn mainly in the middle/upper area so UI doesn't block it too much
+            const y = Math.random() * (window.innerHeight - size - 200) + 50; 
+
+            letterEl.style.left = `${x}px`;
+            letterEl.style.top = `${y}px`;
+
+            // Randomize animation delays so they don't move in sync
+            letterEl.style.animationDelay = `${Math.random() * 2}s, ${Math.random() * 2}s`;
+            
+            // Random slight rotation
+            letterEl.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+
+            // Handle Interaction (Click / Touch)
+            const handleInteract = (e) => {
+                e.preventDefault(); // Prevent double firing on touch devices
+                if(letterEl.classList.contains('popping')) return;
+                
+                checkLetter(char, letterEl);
+            };
+
+            letterEl.addEventListener('mousedown', handleInteract);
+            letterEl.addEventListener('touchstart', handleInteract, {passive: false});
+
+            arWorld.appendChild(letterEl);
+
+            // Auto-remove after some time to refresh the board
+            setTimeout(() => {
+                if (letterEl.parentNode === arWorld && !letterEl.classList.contains('popping')) {
+                    // Fade out then remove
+                    letterEl.style.opacity = '0';
+                    letterEl.style.transition = 'opacity 0.5s';
+                    setTimeout(() => {
+                         if (letterEl.parentNode === arWorld) arWorld.removeChild(letterEl);
+                    }, 500);
+                }
+            }, 8000 + Math.random() * 4000); // 8-12 seconds lifetime
+        }
+
+        function checkLetter(char, element) {
+            // Add pop animation
+            element.classList.add('popping');
+            
+            // Remove from DOM after animation
+            setTimeout(() => {
+                if(element.parentNode === arWorld) arWorld.removeChild(element);
+            }, 400);
+
+            // Check if it's the right letter
+            if (collectedWord.length < targetWord.length) {
+                const neededChar = targetWord[collectedWord.length];
+                
+                if (char === neededChar) {
+                    // Correct letter!
+                    collectedWord += char;
+                    score += 10;
+                    updateScore();
+                    renderTargetDisplay();
+                    renderCollectedSlots();
+                    
+                    // Create floating text +10
+                    showFloatingText('+10', element.style.left, element.style.top, '#10b981');
+
+                    // Check if word is complete
+                    if (collectedWord.length === targetWord.length) {
+                        wordComplete();
+                    }
+                } else {
+                    // Wrong letter penalty (optional, let's keep it simple and just show red text)
+                    showFloatingText('ผิด!', element.style.left, element.style.top, '#ef4444');
+                    // score = Math.max(0, score - 2); // Optional penalty
+                    // updateScore();
+                }
+            }
+        }
+
+        function wordComplete() {
+            score += 50; // Bonus for completing word
+            updateScore();
+            
+            // Visual feedback
+            targetWordDisplay.classList.add('word-success');
+            fireConfetti();
+            
+            setTimeout(() => {
+                targetWordDisplay.classList.remove('word-success');
+                // Small delay before next word
+                setTimeout(loadNextWord, 500);
+            }, 1000);
+        }
+
+        function showFloatingText(text, x, y, color) {
+            const floater = document.createElement('div');
+            floater.textContent = text;
+            floater.style.position = 'absolute';
+            floater.style.left = x;
+            floater.style.top = y;
+            floater.style.color = color;
+            floater.style.fontWeight = 'bold';
+            floater.style.fontSize = '2rem';
+            floater.style.textShadow = '1px 1px 2px black';
+            floater.style.pointerEvents = 'none';
+            floater.style.zIndex = '100';
+            floater.style.transition = 'all 1s ease-out';
+            
+            document.body.appendChild(floater);
+            
+            // Animate up and fade out
+            setTimeout(() => {
+                floater.style.transform = 'translateY(-50px)';
+                floater.style.opacity = '0';
+            }, 50);
+            
+            setTimeout(() => {
+                if(floater.parentNode) document.body.removeChild(floater);
+            }, 1000);
+        }
+
+        // Simple Confetti using Canvas
+        function fireConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const particles = [];
+            const colors = ['#fcd34d', '#f87171', '#60a5fa', '#34d399', '#a78bfa'];
+            
+            for(let i=0; i<50; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 1) * 20 - 5,
+                    size: Math.random() * 10 + 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rot: Math.random() * 360,
+                    rotSpeed: (Math.random() - 0.5) * 10
+                });
+            }
+            
+            let frame = 0;
+            function animateConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let activeParticles = 0;
+                
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.5; // gravity
+                    p.rot += p.rotSpeed;
+                    
+                    if (p.y < canvas.height) {
+                        activeParticles++;
+                        ctx.save();
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(p.rot * Math.PI / 180);
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                        ctx.restore();
+                    }
+                });
+                
+                frame++;
+                if (activeParticles > 0 && frame < 100) {
+                    requestAnimationFrame(animateConfetti);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            animateConfetti();
+        }
+
+        // Initialize game events on load
+        window.onload = initGame;
+
+    </script>
 </body>
 </html>
