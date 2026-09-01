@@ -463,38 +463,45 @@ this.spriteIndex = 0;
                 ctx.ellipse(this.x, drawY + this.radius * 1.5, this.radius * 0.8, this.radius * 0.2, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                if (zombieImageLoaded) {
-                    const totalWidth = zombieImage.width;
-                    const totalHeight = zombieImage.height;
-                    const sliceWidth = totalWidth / this.spriteVariants;
-                    const sliceHeight = totalHeight;
-                    
-                    const sourceX = this.spriteIndex * sliceWidth;
-                    const sourceY = 0;
-                    
-                    const destWidth = sliceWidth * 0.35 * this.scale;
-                    const destHeight = sliceHeight * 0.35 * this.scale;
-                    
-                    ctx.save();
-                    ctx.translate(this.x, drawY);
-                    
-                    if (this.direction === 1) {
-                        ctx.scale(-1, 1);
-                    }
-                    
-                    ctx.rotate(Math.sin(this.wobble) * 0.1);
-                    
-                    ctx.drawImage(
-                        zombieImage, 
-                        sourceX, sourceY, sliceWidth, sliceHeight,
-                        -destWidth/2, -destHeight/2, destWidth, destHeight
-                    );
-                    
-                    ctx.restore();
-                } else {
-                    ctx.fillStyle = this.isBoss ? '#ff00ff' : '#00ffcc';
-                    ctx.fillRect(this.x - this.radius, drawY - this.radius, this.radius*2, this.radius*2);
-                }
+if (zombieImageLoaded) {
+
+    // ใช้ภาพ zombie.png ทั้งภาพ ไม่แบ่งเป็น sprite
+    const destWidth = zombieImage.width * 0.35 * this.scale;
+    const destHeight = zombieImage.height * 0.35 * this.scale;
+
+    ctx.save();
+
+    ctx.translate(this.x, drawY);
+
+    // กลับด้านตามทิศทางการเดิน
+    if (this.direction === 1) {
+        ctx.scale(-1, 1);
+    }
+
+    ctx.rotate(Math.sin(this.wobble) * 0.1);
+
+    ctx.drawImage(
+        zombieImage,
+        -destWidth / 2,
+        -destHeight / 2,
+        destWidth,
+        destHeight
+    );
+
+    ctx.restore();
+
+} else {
+
+    ctx.fillStyle = this.isBoss ? '#ff00ff' : '#00ffcc';
+
+    ctx.fillRect(
+        this.x - this.radius,
+        drawY - this.radius,
+        this.radius * 2,
+        this.radius * 2
+    );
+
+}
 
                 const textWidth = ctx.measureText(this.word).width + 30;
                 const tagHeight = 30;
