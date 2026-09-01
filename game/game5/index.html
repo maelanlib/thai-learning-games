@@ -14,7 +14,7 @@
             overflow: hidden;
             background-color: #f0f8ff; /* Fallback background */
             /* Simulate a camera feed background for "AR" feel */
-            background-image: url('https://images.unsplash.com/photo-1542204165-65bf26472b9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-image: url('https://cdn.pixabay.com/photo/2023/09/15/14/50/sky-8254928_1280.jpg');
             background-size: cover;
             background-position: center;
             touch-action: none; /* Prevent default touch actions like scrolling */
@@ -284,7 +284,7 @@
             <!-- Top Bar: Score and Timer -->
             <div class="top-bar">
                 <div class="stat-box">คะแนน: <span id="score">0</span></div>
-                <div class="stat-box">เวลา: <span id="timer">60</span>s</div>
+                <div class="stat-box">เวลา: <span id="timer">180</span>s</div>
             </div>
 
             <!-- Target Word Display -->
@@ -379,7 +379,7 @@
             gameOverScreen.classList.add('hidden');
             
             score = 0;
-            timeLeft = 60;
+            timeLeft = 180;
             isPlaying = true;
             updateScore();
             updateTimerDisplay();
@@ -639,6 +639,101 @@
                 if(floater.parentNode) document.body.removeChild(floater);
             }, 1000);
         }
+
+
+
+// ===============================
+// 🎵 BGM - เกมล่าคำไทย
+// ===============================
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let musicPlaying = false;
+let musicTimer = null;
+
+function playNote(freq, duration, startTime, volume = 0.05) {
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        startTime + duration
+    );
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+}
+
+function startMusic() {
+
+    if (musicPlaying) return;
+
+    musicPlaying = true;
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+
+    playMelody();
+}
+
+function playMelody() {
+
+    if (!musicPlaying) return;
+
+    const now = audioCtx.currentTime;
+
+    // 🎵 เกมล่าคำไทย
+    const melody = [
+        523.25, 587.33, 659.25, 783.99,
+        659.25, 587.33, 523.25, 440.00,
+
+        493.88, 587.33, 659.25, 698.46,
+        783.99, 659.25, 587.33, 523.25,
+
+        659.25, 783.99, 880.00, 783.99,
+        659.25, 587.33, 523.25, 659.25
+    ];
+
+    melody.forEach((note, i) => {
+
+        playNote(
+            note,
+            0.22,
+            now + i * 0.25,
+            0.045
+        );
+
+    });
+
+    musicTimer = setTimeout(() => {
+        playMelody();
+    }, 6000);
+}
+
+function stopMusic() {
+
+    musicPlaying = false;
+
+    if (musicTimer) {
+        clearTimeout(musicTimer);
+        musicTimer = null;
+    }
+}
+
+
+
+startMusic()
+
 
         // Simple Confetti using Canvas
         function fireConfetti() {
