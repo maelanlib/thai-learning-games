@@ -337,19 +337,19 @@
 // --- ASSETS ---
 
 const zombieImage = new Image();
-zombieImage.src = '../assets/zombit.png';
+zombieImage.src = '../../assets/zombit.png';
 
 let zombieImageLoaded = false;
 
 zombieImage.onload = () => {
     zombieImageLoaded = true;
+    console.log('โหลดภาพซอมบี้สำเร็จ:', zombieImage.src);
 };
 
 zombieImage.onerror = () => {
-    console.error('ไม่สามารถโหลดภาพซอมบี้: assets/zombit.png');
     zombieImageLoaded = false;
+    console.error('โหลดภาพซอมบี้ไม่สำเร็จ:', zombieImage.src);
 };
-
         let audioCtx;
         function initAudio() {
             if (!audioCtx) {
