@@ -402,8 +402,8 @@ zombieImage.onerror = () => {
         class Zombie {
             constructor(isBoss = false) {
                 this.isBoss = isBoss;
-                this.spriteVariants = 3;
-                this.spriteIndex = Math.floor(Math.random() * this.spriteVariants);
+this.spriteVariants = 1;
+this.spriteIndex = 0;
                 
                 this.radius = isBoss ? 50 : 35; 
                 this.scale = isBoss ? 1.5 : 1.0;
