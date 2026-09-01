@@ -466,29 +466,29 @@ this.spriteIndex = 0;
 if (zombieImageLoaded) {
 
     // ใช้ภาพ zombie.png ทั้งภาพ ไม่แบ่งเป็น sprite
-    const destWidth = zombieImage.width * 0.35 * this.scale;
-    const destHeight = zombieImage.height * 0.35 * this.scale;
+    const destWidth = zombieImage.width * 0.65 * this.scale;
+    const destHeight = zombieImage.height * 0.65 * this.scale;
 
     ctx.save();
 
-    ctx.translate(this.x, drawY);
+ctx.translate(this.x, drawY);
 
-    // กลับด้านตามทิศทางการเดิน
-    if (this.direction === 1) {
-        ctx.scale(-1, 1);
-    }
+// กลับด้านตามทิศทางการเดิน
+if (this.direction === -1) {
+    ctx.scale(-1, 1);
+}
 
-    ctx.rotate(Math.sin(this.wobble) * 0.1);
+ctx.rotate(Math.sin(this.wobble) * 0.1);
 
-    ctx.drawImage(
-        zombieImage,
-        -destWidth / 2,
-        -destHeight / 2,
-        destWidth,
-        destHeight
-    );
+ctx.drawImage(
+    zombieImage,
+    -destWidth / 2,
+    -destHeight / 2,
+    destWidth,
+    destHeight
+);
 
-    ctx.restore();
+ctx.restore();
 
 } else {
 
