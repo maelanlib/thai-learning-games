@@ -679,6 +679,90 @@
             });
         }
 
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let musicPlaying = false;
+let musicTimer = null;
+
+function playNote(freq, duration, startTime, volume = 0.08) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        startTime + duration
+    );
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+}
+
+function startMusic() {
+
+    if (musicPlaying) return;
+
+    musicPlaying = true;
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+
+    playMelody();
+}
+
+function playMelody() {
+
+    if (!musicPlaying) return;
+
+    const now = audioCtx.currentTime;
+
+    // C major
+    const melody = [
+        261.63, 329.63, 392.00, 329.63,
+        293.66, 349.23, 440.00, 349.23,
+        261.63, 329.63, 392.00, 523.25
+    ];
+
+    melody.forEach((note, i) => {
+        playNote(
+            note,
+            0.35,
+            now + i * 0.4,
+            0.06
+        );
+    });
+
+    musicTimer = setTimeout(() => {
+        playMelody();
+    }, 4800);
+}
+
+function stopMusic() {
+
+    musicPlaying = false;
+
+    if (musicTimer) {
+        clearTimeout(musicTimer);
+        musicTimer = null;
+    }
+}
+
+
+
+
+
+
+
+
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -825,6 +909,7 @@
             }
         }
 
+
         canvas.addEventListener('mousedown', (e) => updatePointer(e, true));
         canvas.addEventListener('mousemove', (e) => { if(pointerState.isDown) updatePointer(e, true) });
         window.addEventListener('mouseup', (e) => updatePointer(e, false));
@@ -836,7 +921,7 @@
 
         document.getElementById('startBtn').addEventListener('click', startGame);
         document.getElementById('restartBtn').addEventListener('click', startGame);
-        
+        startMusic()
         document.getElementById('saveBtn').addEventListener('click', () => {
             const certCard = document.getElementById('certificateCard');
             const buttons = document.getElementById('certButtons');
