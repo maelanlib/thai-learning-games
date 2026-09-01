@@ -1,404 +1,742 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกมเติมคำควบกล้ำหรรษา</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js สำหรับเสียง Effect -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Mali', cursive;
+            background: linear-gradient(180deg, #a7f3d0 0%, #38bdf8 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            /* ป้องกันการเผลอเลื่อนหน้าจอขณะลากบนมือถือ */
+            overscroll-behavior: none; 
+        }
 
-<title>Pixel Folder Tree</title>
+        /* อนิเมชันต่างๆ */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📁</text></svg>">
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px) rotate(-3deg); }
+            40%, 80% { transform: translateX(5px) rotate(3deg); }
+        }
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
 
-body{
-margin:0;
-background:#101018;
-color:white;
-font-family:'Press Start 2P',monospace;
-}
+        @keyframes bubbleUp {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
 
-.container{
-max-width:950px;
-margin:30px auto;
-background:#1b1b2f;
-border:4px solid #7c5cff;
-padding:25px;
-box-shadow:8px 8px 0 #000;
-}
+        /* อนิเมชันปลาว่ายน้ำไปมา */
+        @keyframes swim-across {
+            0% { transform: translateX(calc(-50vw - 150px)) scaleX(1); }
+            48% { transform: translateX(calc(50vw + 150px)) scaleX(1); }
+            50% { transform: translateX(calc(50vw + 150px)) scaleX(-1); }
+            98% { transform: translateX(calc(-50vw - 150px)) scaleX(-1); }
+            100% { transform: translateX(calc(-50vw - 150px)) scaleX(1); }
+        }
 
-h1{
-text-align:center;
-color:#ffd166;
-font-size:20px;
-}
+        /* คลาสเรียกใช้อนิเมชัน */
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+        .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        .fish-swimming {
+            position: absolute;
+            top: 15px;
+            left: 50%; /* เริ่มกึ่งกลางเพื่อให้คำนวณ vw ได้ง่าย */
+            animation: swim-across 25s linear infinite;
+            z-index: 0; /* ให้อยู่หลังตัวหนังสือ */
+        }
 
-input{
-display:none;
-}
+        /* ฟองสบู่ (เกม) */
+        .word-bubble {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: inset -4px -4px 10px rgba(0,0,0,0.1), 4px 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            touch-action: none;
+        }
+        .word-bubble.correct {
+            background: rgba(134, 239, 172, 0.9); /* สีเขียว */
+            border-color: #22c55e;
+            cursor: pointer; /* ให้รู้ว่ากดฟังเสียงได้ */
+        }
+        .word-bubble.wrong {
+            background: rgba(254, 202, 202, 0.9); /* สีแดง */
+            border-color: #ef4444;
+        }
 
-.btn{
-display:block;
-background:#7c5cff;
-padding:15px;
-text-align:center;
-cursor:pointer;
-box-shadow:4px 4px 0 #000;
-margin-bottom:15px;
-}
+        /* เครื่องมือลาก */
+        .draggable-tool {
+            touch-action: none; /* สำคัญมากสำหรับ Pointer Events บนมือถือ */
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-button{
-width:100%;
-padding:15px;
-background:#00b894;
-border:0;
-color:white;
-font-family:inherit;
-cursor:pointer;
-box-shadow:4px 4px 0 #000;
-margin-bottom:20px;
-}
+        /* คลาสสำหรับการลาก (Clone) */
+        .dragging-clone {
+            position: fixed;
+            pointer-events: none; /* ทะลุการคลิกไปหาตัวรับด้านล่าง */
+            z-index: 1000;
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 0.9;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
 
-#tree{
-background:#080812;
-border:3px solid #333;
-padding:20px;
-line-height:1.8;
-font-size:13px;
-white-space:pre;
-}
-
-.folder{
-color:#ffd166;
-cursor:pointer;
-}
-
-.file{
-color:#8be9fd;
-}
-
-#popup{
-position:fixed;
-top:30px;
-left:50%;
-transform:translateX(-50%);
-background:#00b894;
-padding:15px 25px;
-border:4px solid #000;
-box-shadow:6px 6px 0 #000;
-display:none;
-z-index:99;
-}
-</style>
-
+        /* เอฟเฟกต์ฟองพื้นหลัง */
+        .bg-bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            animation: bubbleUp linear infinite;
+        }
+    </style>
 </head>
+<body class="pb-32 flex flex-col items-center">
 
-<body>
+    <!-- พื้นหลังฟองอากาศ -->
+    <div id="bg-bubbles" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
 
-<div class="container">
+    <!-- ปลาว่ายน้ำ -->
+    <div class="fixed top-0 left-0 w-full h-0 z-0 pointer-events-none">
+        <div class="fish-swimming">
+            <!-- ภาพปลาการ์ตูนด้วย SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" class="w-24 h-24 drop-shadow-lg">
+                <!-- หาง -->
+                <path d="M 20 30 Q 5 10 5 30 Q 5 50 20 30" fill="#f97316"/>
+                <path d="M 18 30 Q 8 15 8 30 Q 8 45 18 30" fill="#ea580c"/>
+                <!-- ลำตัว -->
+                <ellipse cx="50" cy="30" rx="30" ry="20" fill="#f97316"/>
+                <!-- แถบสีขาว -->
+                <path d="M 40 11 Q 45 30 40 49 Q 35 30 40 11" fill="white" stroke="#ea580c" stroke-width="1.5"/>
+                <path d="M 60 14 Q 65 30 60 46 Q 55 30 60 14" fill="white" stroke="#ea580c" stroke-width="1.5"/>
+                <!-- ครีบ -->
+                <path d="M 45 10 Q 55 0 65 15 Q 55 10 45 10" fill="#f97316" stroke="#ea580c" stroke-width="1"/>
+                <path d="M 45 50 Q 55 60 65 45 Q 55 50 45 50" fill="#f97316" stroke="#ea580c" stroke-width="1"/>
+                <path d="M 50 35 Q 55 45 40 40 Q 45 35 50 35" fill="#fb923c" stroke="#ea580c" stroke-width="1"/>
+                <!-- ตา -->
+                <circle cx="70" cy="22" r="4.5" fill="white"/>
+                <circle cx="71" cy="22" r="2" fill="black"/>
+                <circle cx="72" cy="21" r="0.8" fill="white"/> <!-- แววตา -->
+                <!-- ปากยิ้ม -->
+                <path d="M 72 36 Q 75 39 78 36" fill="none" stroke="#9a3412" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        </div>
+    </div>
 
-<h1>📁 PIXEL FOLDER TREE</h1>
+    <!-- Header -->
+    <header class="w-full max-w-4xl px-4 pt-10 pb-4 z-10 flex flex-col items-center justify-center relative">
+        <h1 class="text-3xl md:text-5xl font-bold text-white text-center drop-shadow-md mb-4">เกมเติมคำควบกล้ำหรรษา</h1>
+        
+        <!-- แถบแสดงคะแนนและเวลา -->
+        <div class="flex flex-wrap justify-center gap-3 md:gap-6 w-full">
+            <div class="bg-white/90 px-5 py-2 rounded-full shadow-md font-bold text-lg md:text-xl text-sky-600 flex items-center gap-2 border-2 border-sky-200">
+                ⭐ คะแนน: <span id="total-score-display">0</span>
+            </div>
+            <div id="timer-box" class="bg-white/90 px-5 py-2 rounded-full shadow-md font-bold text-lg md:text-xl text-red-500 flex items-center gap-2 border-2 border-red-200 transition-colors">
+                ⏱️ เวลา: <span id="time-display">03:00</span>
+            </div>
+        </div>
+    </header>
 
-<label class="btn">
-📂 SELECT FOLDER
-<input id="folder" type="file" webkitdirectory multiple>
-</label>
+    <!-- พื้นที่เล่นเกม (Game Board) -->
+    <main class="w-full max-w-5xl px-4 z-10 flex-grow mt-2">
+        <!-- CSS Grid -->
+        <div id="game-board" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 w-full">
+            <!-- จะถูกเติมด้วย JavaScript -->
+        </div>
+    </main>
 
-<button onclick="copyTree()">
-📋 COPY STRUCTURE
-</button>
+    <!-- Toolbar ด้านล่างสุด (Fixed) -->
+    <footer class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-3xl z-40 pb-safe">
+        <div class="max-w-md mx-auto px-4 py-4">
+            <p class="text-center text-gray-500 font-semibold mb-3 text-sm md:text-base">ลากตัวอักษรไปเติมในฟองสบู่ให้ถูกต้อง</p>
+            <div class="flex justify-around items-center">
+                <div class="draggable-tool w-16 h-16 md:w-20 md:h-20 bg-blue-500 text-white rounded-full flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg border-4 border-blue-300 cursor-grab active:cursor-grabbing hover:bg-blue-600 transition-colors" data-letter="ร">ร</div>
+                <div class="draggable-tool w-16 h-16 md:w-20 md:h-20 bg-pink-500 text-white rounded-full flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg border-4 border-pink-300 cursor-grab active:cursor-grabbing hover:bg-pink-600 transition-colors" data-letter="ล">ล</div>
+                <div class="draggable-tool w-16 h-16 md:w-20 md:h-20 bg-amber-500 text-white rounded-full flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg border-4 border-amber-300 cursor-grab active:cursor-grabbing hover:bg-amber-600 transition-colors" data-letter="ว">ว</div>
+            </div>
+        </div>
+    </footer>
 
-<div id="tree">
-ยังไม่ได้เลือกโฟลเดอร์...
-</div>
+    <!-- หน้าจอเริ่มเกม (Start Screen) -->
+    <div id="start-overlay" class="fixed inset-0 bg-sky-900/90 backdrop-blur-sm z-50 flex items-center justify-center transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-[90%] text-center shadow-2xl">
+            <div class="text-6xl mb-4 animate-float">🐠</div>
+            <h1 class="text-2xl font-bold text-sky-600 mb-4">พร้อมหรือยัง?</h1>
+            <p class="text-gray-600 mb-6 text-lg">หนูมีเวลา <strong>3 นาที</strong><br>ในการเติมคำศัพท์ให้ถูกต้องมากที่สุด</p>
+            <button onclick="startGame()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform active:scale-95 text-xl">
+                เริ่มเกม 🎮
+            </button>
+        </div>
+    </div>
 
-</div>
+    <!-- Modal จบรอบ / หมดเวลา -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-[90%] text-center shadow-2xl transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="text-6xl mb-4 animate-float" id="modal-icon">🎉</div>
+            <h2 class="text-3xl font-bold text-sky-500 mb-2" id="modal-title">เก่งมากจ้า!</h2>
+            <p class="text-gray-600 mb-6 text-lg" id="modal-desc">ผ่านด่านเรียบร้อยแล้ว</p>
+            
+            <div class="bg-blue-50 rounded-2xl p-4 mb-6 border-2 border-blue-200">
+                <p class="text-sm text-gray-500">คะแนนสะสมทั้งหมด</p>
+                <div class="text-5xl font-bold text-blue-600 mt-1"><span id="modal-score">0</span></div>
+            </div>
 
-<div id="popup"></div>
+            <div class="space-y-3">
+                <!-- ปุ่มเล่นรอบต่อไป (เมื่อยังไม่หมดเวลา) -->
+                <button id="btn-next" onclick="startNewRound()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform active:scale-95 text-lg">
+                    เล่นรอบต่อไป 🚀
+                </button>
 
+                <!-- ปุ่มเริ่มเกมใหม่ (เมื่อหมดเวลา) -->
+                <button id="btn-restart" onclick="resetGame()" class="hidden w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform active:scale-95 text-lg">
+                    🔄 เล่นใหม่อีกครั้ง
+                </button>
+                
+                <!-- ปุ่มพิมพ์รายงาน -->
+                <button id="btn-print" onclick="printReport()" class="hidden w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform active:scale-95 text-lg">
+                    🖨️ พิมพ์เกียรติบัตร
+                </button>
+            </div>
+        </div>
+    </div>
 
-<script>
+    <!-- Script ควบคุมระบบทั้งหมด -->
+    <script>
+        // ฐานข้อมูลคำศัพท์
+        const baseWordData = [
+            { full: "ครอบครัว", p: "ค", a: "ร", s: "อบครัว" },
+            { full: "เปรี้ยว", p: "เป", a: "ร", s: "ี้ยว" },
+            { full: "ขรุขระ", p: "ข", a: "ร", s: "ุขระ" },
+            { full: "พร้อม", p: "พ", a: "ร", s: "้อม" },
+            { full: "กราบ", p: "ก", a: "ร", s: "าบ" },
+            { full: "ตรง", p: "ต", a: "ร", s: "ง" },
+            { full: "แปรง", p: "แป", a: "ร", s: "ง" }, 
+            { full: "พริก", p: "พ", a: "ร", s: "ิก" },
+            { full: "มะกรูด", p: "มะก", a: "ร", s: "ูด" },
+            
+            { full: "กล้วย", p: "ก", a: "ล", s: "้วย" },
+            { full: "ปลา", p: "ป", a: "ล", s: "า" },
+            { full: "พลุ", p: "พ", a: "ล", s: "ุ" },
+            { full: "กลม", p: "ก", a: "ล", s: "ม" },
+            { full: "คลาน", p: "ค", a: "ล", s: "าน" },
+            { full: "ปลูก", p: "ป", a: "ล", s: "ูก" },
+            { full: "เกล็ด", p: "เก", a: "ล", s: "็ด" },
+            { full: "โคลน", p: "โค", a: "ล", s: "น" },
+            { full: "เปล", p: "เป", a: "ล", s: "" },
+            
+            { full: "กวาง", p: "ก", a: "ว", s: "าง" },
+            { full: "กวาด", p: "ก", a: "ว", s: "าด" },
+            { full: "ขวาน", p: "ข", a: "ว", s: "าน" },
+            { full: "ควาย", p: "ค", a: "ว", s: "าย" },
+            { full: "ควัน", p: "ค", a: "ว", s: "ัน" },
+            { full: "แกว่ง", p: "แก", a: "ว", s: "่ง" },
+            { full: "กว้าง", p: "ก", a: "ว", s: "้าง" },
+            { full: "ของขวัญ", p: "ของข", a: "ว", s: "ัญ" }
+        ];
 
-let treeData={};
-let structure="";
+        const wordDatabase = [];
+        while(wordDatabase.length < 500) {
+            baseWordData.forEach(word => {
+                if(wordDatabase.length < 500) wordDatabase.push({...word});
+            });
+        }
 
-const input=document.getElementById("folder");
-const tree=document.getElementById("tree");
+        // ตัวแปรสถานะ
+        let totalScore = 0;
+        let wordsInRound = [];
+        let solvedInRound = 0;
+        let isGameOver = false;
+        const WORDS_PER_ROUND = 10;
+        
+        // ระบบเวลา
+        let timeLeft = 180; // 3 นาที
+        let timerInterval = null;
 
+        // ระบบเสียง
+        let audioInitialized = false;
+        let synth, synthWin, synthGameOver;
 
-input.addEventListener("change",()=>{
+        function initAudio() {
+            if (audioInitialized) return;
+            try {
+                Tone.start();
+                synth = new Tone.Synth().toDestination();
+                synthWin = new Tone.PolySynth(Tone.Synth).toDestination();
+                synthGameOver = new Tone.MembraneSynth().toDestination();
+                audioInitialized = true;
+            } catch (e) {
+                console.log("Audio init blocked", e);
+            }
+        }
 
-let files=[...input.files];
+        function playSound(type) {
+            if (!audioInitialized) return;
+            const now = Tone.now();
+            if (type === 'correct') {
+                synth.triggerAttackRelease("E5", "8n");
+            } else if (type === 'wrong') {
+                synth.triggerAttackRelease("C3", "8n");
+            } else if (type === 'win') {
+                synthWin.triggerAttackRelease(["C5", "E5", "G5"], "4n", now);
+                synthWin.triggerAttackRelease(["C5", "E5", "G5", "C6"], "2n", now + 0.4);
+            } else if (type === 'gameover') {
+                synthGameOver.triggerAttackRelease("C2", "2n", now);
+                synthGameOver.triggerAttackRelease("G1", "1n", now + 0.5);
+            }
+        }
 
-treeData={};
+        function speakWord(word) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'th-TH';
+                utterance.rate = 0.85; 
+                window.speechSynthesis.speak(utterance);
+            }
+        }
 
+        function createBackgroundBubbles() {
+            const container = document.getElementById('bg-bubbles');
+            for (let i = 0; i < 15; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bg-bubble';
+                const size = Math.random() * 40 + 10;
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 100}vw`;
+                bubble.style.animationDuration = `${Math.random() * 5 + 5}s`;
+                bubble.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(bubble);
+            }
+        }
 
-files.forEach(file=>{
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
 
-let path=file.webkitRelativePath.split("/");
-let current=treeData;
+        // ฟังก์ชันระบบเวลา
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                    
+                    // เตือนเมื่อเหลือน้อยกว่า 10 วินาที
+                    const timerBox = document.getElementById('timer-box');
+                    if (timeLeft <= 10) {
+                        timerBox.classList.remove('border-red-200');
+                        timerBox.classList.add('bg-red-100', 'border-red-500', 'animate-pulse');
+                    }
+                } else {
+                    clearInterval(timerInterval);
+                    triggerGameOver();
+                }
+            }, 1000);
+        }
 
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('time-display').innerText = `${m}:${s}`;
+        }
 
-path.forEach((part,index)=>{
+        function triggerGameOver() {
+            isGameOver = true;
+            playSound('gameover');
+            
+            // ล้างหน้ากระดาน
+            document.getElementById('game-board').innerHTML = '';
+            
+            setTimeout(() => {
+                showModal('gameover');
+            }, 500);
+        }
 
-if(!current[part]){
+        // ควบคุมเกมหลัก
+        function startGame() {
+            initAudio();
+            const startOverlay = document.getElementById('start-overlay');
+            startOverlay.classList.add('opacity-0');
+            setTimeout(() => startOverlay.classList.add('hidden'), 300);
+            
+            resetGameLogic();
+        }
 
-current[part]=
-index===path.length-1
-?null
-:{};
+        function resetGame() {
+            closeModal();
+            resetGameLogic();
+        }
 
+        function resetGameLogic() {
+            totalScore = 0;
+            timeLeft = 180;
+            isGameOver = false;
+            
+            document.getElementById('total-score-display').innerText = totalScore;
+            
+            const timerBox = document.getElementById('timer-box');
+            timerBox.classList.remove('bg-red-100', 'border-red-500', 'animate-pulse');
+            timerBox.classList.add('border-red-200');
+            
+            updateTimerDisplay();
+            startNewRound();
+            startTimer();
+        }
+
+        function startNewRound() {
+            closeModal();
+            if (isGameOver) return;
+            
+            solvedInRound = 0;
+            const board = document.getElementById('game-board');
+            board.innerHTML = ''; 
+
+            let shuffledDb = shuffleArray([...wordDatabase]);
+            wordsInRound = shuffledDb.slice(0, WORDS_PER_ROUND);
+
+            wordsInRound.forEach((wordObj, index) => {
+                const bubble = document.createElement('div');
+                bubble.className = 'word-bubble flex items-center justify-center rounded-[2rem] h-24 md:h-32 text-2xl md:text-3xl font-bold text-gray-700 select-none relative animate-float';
+                bubble.style.animationDelay = `${Math.random() * 2}s`;
+                bubble.dataset.index = index;
+                bubble.dataset.answer = wordObj.a;
+                bubble.dataset.full = wordObj.full;
+                
+                bubble.innerHTML = `
+                    <span class="pointer-events-none">${wordObj.p}</span>
+                    <span class="target-letter opacity-0 border-b-4 border-gray-400 mx-0.5 inline-block text-center min-w-[1.2rem] transition-opacity duration-300 pointer-events-none">${wordObj.a}</span>
+                    <span class="pointer-events-none">${wordObj.s}</span>
+                `;
+
+                bubble.addEventListener('click', () => {
+                    if (bubble.classList.contains('correct') && !isGameOver) {
+                        speakWord(bubble.dataset.full);
+                        bubble.classList.remove('animate-pop');
+                        void bubble.offsetWidth;
+                        bubble.classList.add('animate-pop');
+                    }
+                });
+
+                board.appendChild(bubble);
+            });
+        }
+
+        // ระบบลากวาง (Drag & Drop)
+        const tools = document.querySelectorAll('.draggable-tool');
+        let activeClone = null;
+        let currentLetter = '';
+
+        tools.forEach(tool => {
+            tool.addEventListener('pointerdown', (e) => {
+                if (isGameOver) return;
+                initAudio();
+                e.preventDefault(); 
+
+                currentLetter = tool.dataset.letter;
+                
+                activeClone = tool.cloneNode(true);
+                activeClone.classList.remove('cursor-grab', 'hover:bg-blue-600', 'hover:bg-pink-600', 'hover:bg-amber-600');
+                activeClone.classList.add('dragging-clone');
+                document.body.appendChild(activeClone);
+
+                moveClone(e.clientX, e.clientY);
+
+                window.addEventListener('pointermove', onPointerMove, { passive: false });
+                window.addEventListener('pointerup', onPointerUp);
+                window.addEventListener('pointercancel', onPointerUp);
+            });
+        });
+
+        function moveClone(x, y) {
+            if (activeClone) {
+                activeClone.style.left = `${x}px`;
+                activeClone.style.top = `${y}px`;
+            }
+        }
+
+        function onPointerMove(e) {
+            e.preventDefault();
+            moveClone(e.clientX, e.clientY);
+        }
+
+        function onPointerUp(e) {
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerUp);
+
+            if (activeClone) {
+                activeClone.style.display = 'none'; 
+                const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+                activeClone.style.display = 'flex'; 
+
+                let droppedOnBubble = null;
+                if (targetEl) {
+                    droppedOnBubble = targetEl.closest('.word-bubble');
+                }
+
+                if (droppedOnBubble && !droppedOnBubble.classList.contains('correct') && !isGameOver) {
+                    checkAnswer(droppedOnBubble, currentLetter);
+                }
+
+                activeClone.remove();
+                activeClone = null;
+            }
+        }
+
+        function checkAnswer(bubble, letter) {
+            if (bubble.dataset.answer === letter) {
+                playSound('correct');
+                speakWord(bubble.dataset.full);
+                
+                bubble.classList.add('correct', 'text-white', 'animate-pop');
+                bubble.classList.remove('text-gray-700');
+                
+                const targetSpan = bubble.querySelector('.target-letter');
+                targetSpan.classList.remove('opacity-0', 'border-b-4', 'border-gray-400');
+                targetSpan.classList.add('opacity-100', 'text-green-900'); 
+
+                solvedInRound++;
+                totalScore++;
+                document.getElementById('total-score-display').innerText = totalScore;
+
+                if (solvedInRound === WORDS_PER_ROUND && !isGameOver) {
+                    setTimeout(() => showModal('round'), 1000); 
+                }
+            } else {
+                playSound('wrong');
+                bubble.classList.remove('animate-shake');
+                void bubble.offsetWidth; 
+                bubble.classList.add('wrong', 'animate-shake');
+                
+                setTimeout(() => {
+                    bubble.classList.remove('wrong');
+                }, 800);
+            }
+        }
+
+        // ระบบ Modal (ควบคุมทั้งจบรอบและจบเกม)
+        function showModal(type = 'round') {
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('modal-content');
+            
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const icon = document.getElementById('modal-icon');
+            const btnNext = document.getElementById('btn-next');
+            const btnRestart = document.getElementById('btn-restart');
+            const btnPrint = document.getElementById('btn-print');
+
+            document.getElementById('modal-score').innerText = totalScore;
+
+            if (type === 'gameover') {
+                icon.innerText = "⏰";
+                title.innerText = "หมดเวลาแล้ว!";
+                title.className = "text-3xl font-bold text-red-500 mb-2";
+                desc.innerText = "มาดูกันว่าหนูทำคะแนนไปได้เท่าไหร่";
+                
+                btnNext.classList.add('hidden');
+                btnRestart.classList.remove('hidden');
+                
+                // โชว์ปุ่มพิมพ์เสมอตอนจบเกม ถ้ามีคะแนน
+                if (totalScore > 0) btnPrint.classList.remove('hidden');
+                else btnPrint.classList.add('hidden');
+                
+            } else {
+                playSound('win');
+                icon.innerText = "🎉";
+                title.innerText = "เก่งมากจ้า!";
+                title.className = "text-3xl font-bold text-sky-500 mb-2";
+                desc.innerText = "ผ่านด่านเรียบร้อยแล้ว ลุยต่อเลย!";
+                
+                btnNext.classList.remove('hidden');
+                btnRestart.classList.add('hidden');
+                btnPrint.classList.add('hidden');
+            }
+
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('modal-content');
+            
+            overlay.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+
+        // พิมพ์เกียรติบัตร
+        function printReport() {
+            const today = new Date().toLocaleDateString('th-TH', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            const printWindow = window.open('', '_blank');
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html lang="th">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>เกียรติบัตรคนเก่ง</title>
+                    <style>
+                        body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; text-align: center; }
+                        .certificate { border: 10px solid #38bdf8; padding: 50px; border-radius: 20px; max-width: 800px; margin: 0 auto; }
+                        h1 { color: #0284c7; font-size: 36px; }
+                        .score { font-size: 80px; font-weight: bold; color: #22c55e; margin: 20px 0; }
+                        .date { font-size: 18px; color: #666; margin-top: 40px; }
+                        .stars { font-size: 40px; color: #fbbf24; margin-bottom: 20px; }
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="certificate">
+                        <div class="stars">⭐⭐⭐⭐⭐</div>
+                        <h1>เกียรติบัตรคนเก่ง</h1>
+                        <h2>เกมเติมคำควบกล้ำหรรษา (จับเวลา 3 นาที)</h2>
+                        <p style="font-size: 24px; margin-top: 30px;">หนูทำได้ยอดเยี่ยมมาก! ตอบคำศัพท์ถูกต้องทั้งหมด</p>
+                        <div class="score">${totalScore} คำ</div>
+                        <p style="font-size: 20px;">เรียนรู้คำควบกล้ำ (ร, ล, ว) ได้อย่างคล่องแคล่ว</p>
+                        <div class="date">พิมพ์เมื่อวันที่: ${today}</div>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); }
+                    <\/script>
+                </body>
+                </html>
+            `;
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+        }
+
+        // โหลดกราฟิกตั้งต้น
+        createBackgroundBubbles();
+// ===============================
+// 🎵 BGM - เกมเติมคำควบกล้ำหรรษา
+// ===============================
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let musicPlaying = false;
+let musicTimer = null;
+
+function playNote(freq, duration, startTime, volume = 0.05) {
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        startTime + duration
+    );
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
 }
 
-if(current[part]!==null){
+function startMusic() {
 
-current=current[part];
+    if (musicPlaying) return;
 
+    musicPlaying = true;
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+
+    playMelody();
 }
 
-});
+function playMelody() {
 
-});
+    if (!musicPlaying) return;
 
+    const now = audioCtx.currentTime;
 
-renderTree();
+    // 🎵 สนุก สดใส เหมือนเกมเติมคำ
+    const melody = [
+        523.25, 659.25, 783.99, 659.25,
+        587.33, 698.46, 880.00, 698.46,
 
-});
+        523.25, 587.33, 659.25, 783.99,
+        880.00, 783.99, 659.25, 587.33,
 
+        659.25, 783.99, 880.00, 1046.50,
+        880.00, 783.99, 659.25, 523.25
+    ];
 
+    melody.forEach((note, i) => {
 
-function getIcon(name,data){
+        playNote(
+            note,
+            0.20,
+            now + i * 0.25,
+            0.045
+        );
 
-if(data!==null)
-return "📁";
+    });
 
-
-let ext=name.split(".").pop().toLowerCase();
-
-
-if(["png","jpg","jpeg","webp","gif"].includes(ext))
-return "🖼️";
-
-
-if(["js","html","css"].includes(ext))
-return "💻";
-
-
-if(["json","tmj","tmx"].includes(ext))
-return "⚙️";
-
-
-return "📄";
-
+    musicTimer = setTimeout(() => {
+        playMelody();
+    }, 6000);
 }
 
+function stopMusic() {
 
+    musicPlaying = false;
 
-function renderTree(){
-
-tree.innerHTML="";
-
-
-let keys=Object.keys(treeData);
-
-
-keys.forEach((key,index)=>{
-
-createNode(
-key,
-treeData[key],
-tree,
-"",
-index===keys.length-1
-);
-
-});
-
-
+    if (musicTimer) {
+        clearTimeout(musicTimer);
+        musicTimer = null;
+    }
 }
 
+startMusic()
 
-
-function createNode(name,data,parent,prefix,last){
-
-
-let row=document.createElement("div");
-
-let branch=
-prefix+(last?"└── ":"├── ");
-
-
-row.textContent=
-branch+
-getIcon(name,data)+" "+name;
-
-
-
-parent.appendChild(row);
-
-
-
-if(data!==null){
-
-
-row.className="folder";
-
-
-let children=document.createElement("div");
-
-parent.appendChild(children);
-
-
-
-row.onclick=()=>{
-
-
-if(children.style.display==="none"){
-
-children.style.display="block";
-
-row.textContent=
-branch+"📂 "+name;
-
-}else{
-
-children.style.display="none";
-
-row.textContent=
-branch+"📁 "+name;
-
-}
-
-};
-
-
-
-let keys=Object.keys(data);
-
-
-keys.forEach((key,index)=>{
-
-
-createNode(
-
-key,
-data[key],
-children,
-prefix+(last?"    ":"│   "),
-index===keys.length-1
-
-);
-
-
-});
-
-
-}else{
-
-
-row.className="file";
-
-
-}
-
-
-
-}
-
-
-
-function buildCopy(obj,prefix=""){
-
-
-let text="";
-
-
-let keys=Object.keys(obj);
-
-
-keys.forEach((key,index)=>{
-
-
-let last=index===keys.length-1;
-
-let data=obj[key];
-
-
-text+=
-prefix+
-(last?"└── ":"├── ")
-+
-getIcon(key,data)
-+" "
-+key+"\n";
-
-
-if(data!==null){
-
-text+=buildCopy(
-
-data,
-
-prefix+(last?"    ":"│   ")
-
-);
-
-}
-
-
-});
-
-
-return text;
-
-}
-
-
-
-
-function copyTree(){
-
-
-if(Object.keys(treeData).length===0){
-
-showPopup("❌ ยังไม่ได้เลือก Folder");
-
-return;
-
-}
-
-
-structure=buildCopy(treeData);
-
-
-navigator.clipboard.writeText(structure);
-
-
-showPopup("✅ Copy Structure แล้ว!");
-
-}
-
-
-
-
-function showPopup(msg){
-
-let p=document.getElementById("popup");
-
-p.textContent=msg;
-
-p.style.display="block";
-
-
-setTimeout(()=>{
-
-p.style.display="none";
-
-},2000);
-
-
-}
-
-</script>
-
+    </script>
 </body>
 </html>
