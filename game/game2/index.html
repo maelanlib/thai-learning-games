@@ -1167,6 +1167,101 @@
     } else {
       modeIndicator.innerText = 'โหมด: 🖱️ เมาส์ / Touch Screen (เบราว์เซอร์ไม่รองรับกล้อง)';
     }
+	
+	const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let musicPlaying = false;
+let musicTimer = null;
+
+function playNote(freq, duration, startTime, volume = 0.08) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        startTime + duration
+    );
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+}
+
+function startMusic() {
+
+    if (musicPlaying) return;
+
+    musicPlaying = true;
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+
+    playMelody();
+}
+
+function playMelody() {
+
+    if (!musicPlaying) return;
+
+    const now = audioCtx.currentTime;
+
+    // 🎣 Fishing Game Melody
+    // แนวสดใส ชิล ๆ เหมือนนั่งตกปลา
+    const melody = [
+
+        // ท่อนที่ 1
+        392.00, 440.00, 523.25, 440.00,
+        392.00, 329.63, 392.00, 440.00,
+
+        // ท่อนที่ 2
+        523.25, 587.33, 659.25, 587.33,
+        523.25, 440.00, 392.00, 329.63,
+
+        // ท่อนที่ 3
+        392.00, 440.00, 523.25, 659.25,
+        587.33, 523.25, 440.00, 392.00,
+
+        // ท่อนจบ
+        329.63, 392.00, 440.00, 523.25,
+        440.00, 392.00, 329.63, 261.63
+    ];
+
+    melody.forEach((note, i) => {
+
+        playNote(
+            note,
+            0.32,
+            now + i * 0.32,
+            0.055
+        );
+
+    });
+
+    // 32 โน้ต × 0.32 = 10.24 วินาที
+    musicTimer = setTimeout(() => {
+        playMelody();
+    }, 10240);
+}
+
+function stopMusic() {
+
+    musicPlaying = false;
+
+    if (musicTimer) {
+        clearTimeout(musicTimer);
+        musicTimer = null;
+    }
+}
+	
+	startMusic()
   </script>
 </body>
 </html>
