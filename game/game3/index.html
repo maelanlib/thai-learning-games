@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Duck Hunt สำนวนไทย - เกมการศึกษา AR</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <!-- Google Fonts Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Prompt', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        body {
+            overflow: hidden;
+            background-color: #020617;
+            margin: 0;
+            padding: 0;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.2);
+        }
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .mirror {
+            transform: scaleX(-1);
+        }
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .animate-pulse-fast {
+            animation: pulse-fast 0.6s infinite;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex justify-center items-center relative text-slate-800">
+
+    <!-- GAME CONTAINER -->
+    <div id="game-container" class="relative w-full h-full max-w-[1280px] max-h-[720px] shadow-2xl overflow-hidden rounded-none md:rounded-3xl bg-sky-300 border-0 md:border-4 border-slate-800">
+        
+        <!-- LAYER 1: VIDEO FEED (AR WEBCAM BACKGROUND) -->
+        <video id="webcam" class="absolute inset-0 w-full h-full object-cover mirror opacity-20 pointer-events-none" playsinline></video>
+
+        <!-- LAYER 2: GAME CANVAS (SCENERY & DUCKS) -->
+        <canvas id="game-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+        <!-- LAYER 3: HAND SKELETON CANVAS -->
+        <canvas id="hand-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-10"></canvas>
+
+        <!-- LAYER 4: UI OVERLAY -->
+        <div id="ui-layer" class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-2 sm:p-4">
+            
+            <!-- TOP BAR CONTAINER -->
+            <div id="top-bar-container" class="w-full flex flex-col gap-1.5 transition-all duration-300 transform -translate-y-24 opacity-0">
+                <!-- TOP HEADER -->
+                <div class="flex justify-between items-center glass-panel rounded-2xl p-2.5 px-4 sm:px-6 shadow-xl">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-400 flex items-center justify-center text-xl sm:text-2xl shadow-md border-2 border-white">
+                            🦆
+                        </div>
+                        <div>
+                            <h1 class="text-sm sm:text-lg font-black text-sky-950 leading-tight">Duck Hunt สำนวนไทย</h1>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span id="player-display-name" class="text-[10px] sm:text-xs font-extrabold text-sky-900 bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200">ผู้เล่น: -</span>
+                                <!-- BULLETS DISPLAY -->
+                                <span id="ammo-badge" class="text-[10px] sm:text-xs font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 flex items-center gap-1 shadow-sm transition-all">
+                                    กระสุน: <span id="ammo-icons" class="tracking-widest">💥💥</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 sm:gap-6">
+                        <div class="text-center">
+                            <span class="text-[10px] sm:text-xs text-slate-500 font-bold block">⭐ คะแนน</span>
+                            <span id="score-text" class="text-xl sm:text-3xl font-black text-amber-500 drop-shadow">0</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-[10px] sm:text-xs text-slate-500 font-bold block">🎯 ยิงถูก</span>
+                            <span id="hits-text" class="text-xl sm:text-3xl font-black text-emerald-600 drop-shadow">0</span>
+                        </div>
+                        <div class="text-center bg-rose-500 text-white px-3 sm:px-4 py-1 rounded-xl sm:rounded-2xl border-2 border-rose-300 shadow-md">
+                            <span class="text-[9px] sm:text-[10px] text-rose-100 font-bold block uppercase tracking-wider">⏱️ เวลา</span>
+                            <span id="timer-text" class="text-lg sm:text-2xl font-black text-white leading-none">02:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUESTION CARD -->
+                <div id="question-card" class="glass-dark text-white rounded-2xl p-2.5 sm:p-4 text-center shadow-2xl border-b-4 border-amber-400 relative overflow-hidden">
+                    <span class="inline-block bg-amber-400 text-slate-950 font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full shadow mb-0.5">🎯 คำถามสำนวนไทย</span>
+                    <h2 id="question-text" class="text-sm sm:text-xl font-black text-yellow-200 tracking-wide leading-snug">กำลังโหลดคำถาม...</h2>
+                </div>
+            </div>
+
+            <!-- FLOATING COMBO / FEEDBACK TEXT -->
+            <div id="feedback-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                <div id="combo-text" class="text-4xl sm:text-7xl font-black text-amber-400 drop-shadow-[0_6px_6px_rgba(0,0,0,0.9)] scale-0 transition-transform duration-200 uppercase tracking-wider">
+                    COMBO x2!
+                </div>
+                <div id="toast-text" class="text-xl sm:text-3xl font-black text-white bg-slate-900/95 border-2 border-white/30 px-6 sm:px-8 py-2.5 sm:py-3 rounded-full shadow-2xl opacity-0 transition-all duration-300 mt-2">
+                    ถูกต้อง!
+                </div>
+            </div>
+
+            <!-- BOTTOM STATUS / EXPLANATION -->
+            <div class="w-full flex justify-between items-end">
+                <div id="control-mode-badge" class="glass-panel text-[10px] sm:text-xs font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-slate-800 shadow-md border border-white">
+                    📷 โหมดควบคุม: กล้อง AR (นิ้วชี้)
+                </div>
+                <div id="explanation-box" class="hidden glass-dark text-white p-3 sm:p-4 rounded-2xl max-w-xs sm:max-w-md shadow-2xl border-l-4 border-emerald-400">
+                    <p class="text-[10px] sm:text-xs text-emerald-400 font-extrabold flex items-center gap-1">💡 เฉลยความหมาย:</p>
+                    <p id="explanation-text" class="text-xs sm:text-sm font-semibold mt-0.5 text-slate-200">...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENU OVERLAY (START SCREEN) -->
+        <div id="start-screen" class="absolute inset-0 z-30 flex justify-center items-center p-4 bg-sky-950/60 backdrop-blur-md">
+            <div class="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 text-center shadow-2xl border-2 border-white/80 pointer-events-auto">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-gradient-to-tr from-emerald-400 to-green-300 rounded-3xl flex items-center justify-center text-4xl sm:text-5xl shadow-lg border-2 border-white mb-2 sm:mb-3 animate-bounce">
+                    🦆
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-sky-950 tracking-tight">Duck Hunt</h1>
+                <p class="text-sm sm:text-base font-bold text-emerald-700 mb-4 sm:mb-6">สำนวนไทย (สำหรับนักศึกษา กศน.)</p>
+                
+                <div class="space-y-3 text-left mb-5">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-black text-slate-700 mb-1">👤 ตั้งชื่อผู้เล่นก่อนเริ่มเกม:</label>
+                        <input type="text" id="player-name-input" placeholder="พิมพ์ชื่อของคุณที่นี่..." 
+                            class="w-full px-4 py-3 rounded-2xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none font-bold text-base sm:text-lg text-slate-800 shadow-inner bg-white/90">
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50/90 p-3.5 rounded-2xl mb-5 text-xs text-slate-700 space-y-1.5 text-left border border-emerald-200 shadow-sm">
+                    <p class="font-black text-emerald-900 text-xs sm:text-sm mb-1">🎮 กติกาการเล่น:</p>
+                    <p>1. ใช้นิ้วชี้และนิ้วโป้งเป็นเป้าเล็ง <b>"จีบนิ้ว"</b> (Pinch) เพื่อยิงเป็ด</p>
+                    <p>2. มี <b>กระสุน 2 นัดต่อโจทย์</b> หากยิงผิดหรือยิงวืดหมด จะเปลี่ยนข้อทันที!</p>
+                    <p>3. มีเวลาสะสมคะแนนเต็ม <b>2 นาที (120 วินาที)</b></p>
+                </div>
+
+                <button id="start-btn" class="w-full bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-600 hover:to-green-600 text-white font-black text-lg sm:text-xl py-3.5 rounded-2xl shadow-xl border-b-4 border-emerald-800 active:translate-y-1 active:border-b-0 transition-all cursor-pointer">
+                    🎮 เริ่มเข้าป่าล่าเป็ด
+                </button>
+            </div>
+        </div>
+
+        <!-- COUNTDOWN OVERLAY -->
+        <div id="countdown-screen" class="hidden absolute inset-0 z-40 flex justify-center items-center bg-slate-950/70 backdrop-blur-md pointer-events-none">
+            <span id="countdown-text" class="text-8xl sm:text-9xl font-black text-amber-400 drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)] animate-pulse-fast">
+                3
+            </span>
+        </div>
+
+        <!-- RESULT OVERLAY -->
+        <div id="result-screen" class="hidden absolute inset-0 z-50 flex justify-center items-center p-4 bg-slate-950/85 backdrop-blur-xl">
+            <div class="w-full max-w-lg text-center pointer-events-auto">
+                <div id="screenshot-card" class="glass-panel rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-amber-400 bg-gradient-to-b from-sky-100 via-sky-50 to-sky-200 text-slate-800 mb-4">
+                    <div class="w-14 h-14 mx-auto bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-md border border-white mb-2">🏆</div>
+                    <h2 class="text-xl sm:text-2xl font-black text-sky-950">สรุปผลการแข่งขัน</h2>
+                    <p class="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Duck Hunt สำนวนไทย</p>
+                    
+                    <div class="bg-white/90 rounded-2xl p-3.5 sm:p-4 shadow-inner mb-3 space-y-2 border border-sky-200 text-left text-xs sm:text-sm">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                            <span class="text-slate-600 font-bold">👤 ชื่อผู้เล่น:</span>
+                            <span id="res-player-name" class="font-black text-sky-900">-</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                            <span class="text-slate-600 font-bold">⭐ คะแนนรวม:</span>
+                            <span id="res-score" class="font-black text-2xl text-amber-500">0</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                            <span class="text-slate-600 font-bold">🎯 ยิงถูกต้อง:</span>
+                            <span id="res-hits" class="font-black text-emerald-600">0 ตัว</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-bold">⏱️ เวลาที่ใช้:</span>
+                            <span class="font-extrabold text-slate-800">2 นาที (120 วินาที)</span>
+                        </div>
+                    </div>
+
+                    <div id="res-evaluation" class="bg-amber-400/30 text-amber-950 font-black p-2.5 rounded-xl border border-amber-400 text-xs sm:text-base shadow-sm">
+                        ยอดเยี่ยมมาก!
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2.5 justify-center">
+                    <button id="screenshot-btn" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-2xl shadow-lg border-b-4 border-emerald-700 active:translate-y-1 active:border-b-0 transition-all cursor-pointer flex items-center justify-center gap-2 text-sm sm:text-base">
+                        📸 แคปหน้าจอคะแนน
+                    </button>
+                    <button id="restart-btn" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-2xl shadow-lg border-b-4 border-amber-700 active:translate-y-1 active:border-b-0 transition-all cursor-pointer flex items-center justify-center gap-2 text-sm sm:text-base">
+                        🔄 เล่นอีกครั้ง
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AUDIO SYNTHESIS SYSTEM -->
+    <script>
+        // Web Audio API Sound Generator
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.bgmOscs = [];
+                this.isPlayingBGM = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+        // NEW: Background Music - Simple Relaxing RPG BGM
+startBGM() {
+    this.init();
+    this.stopBGM();
+
+    this.isPlayingBGM = true;
+
+    this.bgmGain = this.ctx.createGain();
+    this.bgmGain.gain.value = 0.10;
+    this.bgmGain.connect(this.ctx.destination);
+
+    // ============================================================
+    // Musical notes
+    // C Major / A Minor style
+    // ============================================================
+
+    const notes = {
+        C3: 130.81,
+        D3: 146.83,
+        E3: 164.81,
+        F3: 174.61,
+        G3: 196.00,
+        A3: 220.00,
+        B3: 246.94,
+
+        C4: 261.63,
+        D4: 293.66,
+        E4: 329.63,
+        F4: 349.23,
+        G4: 392.00,
+        A4: 440.00,
+        B4: 493.88,
+
+        C5: 523.25,
+        D5: 587.33,
+        E5: 659.25,
+        F5: 698.46,
+        G5: 783.99,
+        A5: 880.00
+    };
+
+    // ============================================================
+    // Play one note
+    // ============================================================
+
+    const playNote = (freq, time, duration, volume, type = 'sine') => {
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0, time);
+
+        // Attack
+        gain.gain.linearRampToValueAtTime(
+            volume,
+            time + 0.03
+        );
+
+        // Sustain
+        gain.gain.setValueAtTime(
+            volume,
+            time + duration * 0.65
+        );
+
+        // Release
+        gain.gain.linearRampToValueAtTime(
+            0,
+            time + duration
+        );
+
+        osc.connect(gain);
+        gain.connect(this.bgmGain);
+
+        osc.start(time);
+        osc.stop(time + duration + 0.05);
+    };
+
+    // ============================================================
+    // Music pattern
+    //
+    // 8 beats = 1 loop
+    // ============================================================
+
+    const bpm = 78;
+    const beat = 60 / bpm;
+
+    const startTime = this.ctx.currentTime + 0.1;
+
+    // ============================================================
+    // Chords
+    // ============================================================
+
+    const chords = [
+        // C Major
+        [notes.C3, notes.E3, notes.G3],
+
+        // G Major
+        [notes.G3, notes.B3, notes.D4],
+
+        // A Minor
+        [notes.A3, notes.C4, notes.E4],
+
+        // F Major
+        [notes.F3, notes.A3, notes.C4]
+    ];
+
+    // ============================================================
+    // Melody
+    // ============================================================
+
+    const melody = [
+        notes.E5,
+        notes.G5,
+        notes.A5,
+        notes.G5,
+
+        notes.E5,
+        notes.D5,
+        notes.C5,
+        notes.D5,
+
+        notes.E5,
+        notes.G5,
+        notes.A5,
+        notes.G5,
+
+        notes.E5,
+        notes.D5,
+        notes.C5,
+        notes.G4
+    ];
+
+    // ============================================================
+    // Schedule music
+    // ============================================================
+
+    const loopLength = beat * 16;
+
+    const scheduleLoop = (loopStart) => {
+
+        if (!this.isPlayingBGM) return;
+
+        // --------------------------------------------------------
+        // Chords
+        // --------------------------------------------------------
+
+        chords.forEach((chord, chordIndex) => {
+
+            const chordStart =
+                loopStart + chordIndex * beat * 4;
+
+            chord.forEach(freq => {
+
+                playNote(
+                    freq,
+                    chordStart,
+                    beat * 3.8,
+                    0.018,
+                    'triangle'
+                );
+
+            });
+
+        });
+
+        // --------------------------------------------------------
+        // Bass
+        // --------------------------------------------------------
+
+        const bassNotes = [
+            notes.C3,
+            notes.G3,
+            notes.A3,
+            notes.F3
+        ];
+
+        bassNotes.forEach((freq, i) => {
+
+            playNote(
+                freq,
+                loopStart + i * beat * 4,
+                beat * 2.8,
+                0.045,
+                'sine'
+            );
+
+        });
+
+        // --------------------------------------------------------
+        // Melody
+        // --------------------------------------------------------
+
+        melody.forEach((freq, i) => {
+
+            const noteTime =
+                loopStart + i * (beat / 1);
+
+            playNote(
+                freq,
+                noteTime,
+                beat * 0.65,
+                0.035,
+                'triangle'
+            );
+
+        });
+
+        // --------------------------------------------------------
+        // Schedule next loop
+        // --------------------------------------------------------
+
+        this.bgmTimer = setTimeout(() => {
+
+            scheduleLoop(
+                loopStart + loopLength
+            );
+
+        }, (loopLength - 0.2) * 1000);
+    };
+
+    scheduleLoop(startTime);
+}
+
+
+stopBGM() {
+
+    this.isPlayingBGM = false;
+
+    // Stop scheduler
+    if (this.bgmTimer) {
+        clearTimeout(this.bgmTimer);
+        this.bgmTimer = null;
+    }
+
+    // Stop old oscillators
+    if (this.bgmOscs && this.bgmOscs.length > 0) {
+
+        this.bgmOscs.forEach(nodes => {
+
+            try {
+                nodes.osc.stop();
+            } catch (e) {}
+
+            try {
+                nodes.lfo.stop();
+            } catch (e) {}
+
+            try {
+                nodes.osc.disconnect();
+            } catch (e) {}
+
+            try {
+                nodes.lfo.disconnect();
+            } catch (e) {}
+
+            try {
+                nodes.lfoGain.disconnect();
+            } catch (e) {}
+
+        });
+
+        this.bgmOscs = [];
+    }
+
+    // Stop current gain
+    if (this.bgmGain) {
+
+        try {
+            this.bgmGain.disconnect();
+        } catch (e) {}
+
+        this.bgmGain = null;
+    }
+}
+
+            playGunshot() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const bufferSize = this.ctx.sampleRate * 0.12;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1200, now);
+                filter.frequency.exponentialRampToValueAtTime(100, now + 0.12);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.8, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                noise.start(now);
+            }
+
+            playCorrect() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                osc.frequency.setValueAtTime(783.99, now + 0.16);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+
+            playWrong() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playReload() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.setValueAtTime(800, now + 0.1);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+
+            playBeep(freq = 440, duration = 0.1) {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+        }
+
+        const sound = new SoundSystem();
+    </script>
+
+    <!-- QUESTION DATABASE -->
+    <script>
+        const questionDatabase = [
+            {
+                question: "สำนวนใดหมายถึง \"การทำหลายอย่างพร้อมกัน โดยหวังผลสำเร็จทั้งสองอย่าง\"",
+                choices: ["จับปลาสองมือ", "น้ำขึ้นให้รีบตัก", "สีซอให้ควายฟัง", "ขี่ช้างจับตั๊กแตน"],
+                answer: "จับปลาสองมือ",
+                explanation: "จับปลาสองมือ หมายถึง การทำสองอย่างพร้อมกัน ซึ่งอาจทำให้ล้มเหลวทั้งสองอย่าง"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"เมื่อมีโอกาสดีเข้ามาควรรีบทำทันที\"",
+                choices: ["น้ำขึ้นให้รีบตัก", "กวนน้ำให้ขุ่น", "เข็นครกขึ้นภูเขา", "กระต่ายตื่นตระหนก"],
+                answer: "น้ำขึ้นให้รีบตัก",
+                explanation: "น้ำขึ้นให้รีบตัก หมายถึง เมื่อมีโอกาสดีผ่านเข้ามาก็ควรรีบไขว่คว้าไว้"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การสั่งสอนคนโง่หรือคนดื้อรั้นแล้วไม่ได้ประโยชน์\"",
+                choices: ["สีซอให้ควายฟัง", "ตักน้ำรดหัวตอ", "กวาดบ้านกินเมือง", "ชี้โพรงให้กระรอก"],
+                answer: "สีซอให้ควายฟัง",
+                explanation: "สีซอให้ควายฟัง หมายถึง การสั่งสอนแนะนำคนปัญญาอ่อนหรือดื้อรั้นแต่เขาก็ไม่เข้าใจ"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"ลงทุนมากแต่ได้ผลตอบแทนเพียงนิดเดียว\"",
+                choices: ["ขี่ช้างจับตั๊กแตน", "ตำน้ำพริกละลายแม่น้ำ", "เกี่ยวแฝกหักหนาม", "เข้าเมืองตาหลิ่ว"],
+                answer: "ขี่ช้างจับตั๊กแตน",
+                explanation: "ขี่ช้างจับตั๊กแตน หมายถึง ลงทุนหรือทำงานใหญ่โตแต่ได้ผลประโยชน์เพียงเล็กน้อย"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การเสียทรัพย์สินไปโดยไม่ได้ประโยชน์อะไรกลับมา\"",
+                choices: ["ตำน้ำพริกละลายแม่น้ำ", "เรือหายในคลอง", "ปล่อยเสือเข้าป่า", "วัวหายล้อมคอก"],
+                answer: "ตำน้ำพริกละลายแม่น้ำ",
+                explanation: "ตำน้ำพริกละลายแม่น้ำ หมายถึง เสียทรัพย์จำนวนมากไปโดยไม่ได้ผลประโยชน์ตอบแทน"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"คิดหาทางป้องกันหลังจากเกิดความเสียหายขึ้นแล้ว\"",
+                choices: ["วัวหายล้อมคอก", "ตีตนก่อนไข้", "ตัดไฟแต่ต้นลม", "ชี้โพรงให้กระรอก"],
+                answer: "วัวหายล้อมคอก",
+                explanation: "วัวหายล้อมคอก หมายถึง เกิดเรื่องเสียหายขึ้นแล้วจึงคิดหาทางป้องกันหรือแก้ไข"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การทำความดีโดยไม่หวังชื่อเสียงหรือการยกย่อง\"",
+                choices: ["ปิดทองหลังพระ", "ผักชีโรยหน้า", "หน้าเนื้อใจเสือ", "ผ้าพับไว้"],
+                answer: "ปิดทองหลังพระ",
+                explanation: "ปิดทองหลังพระ หมายถึง การทำความดีโดยไม่อวดอ้างและไม่หวังผลตอบแทน"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การทำดีเพียงฉากหน้าเพื่อตกแต่งให้ดูเรียบร้อยชั่วคราว\"",
+                choices: ["ผักชีโรยหน้า", "ปากหวานก้นเปรี้ยว", "สร้างภาพสวยงาม", "ปิดประตูตีแมว"],
+                answer: "ผักชีโรยหน้า",
+                explanation: "ผักชีโรยหน้า หมายถึง การทำความดีหรือทำให้ดูดีเพียงเพื่อจัดฉากให้ผ่านไปชั่วคราว"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การชี้แนะช่องทางให้ผู้อื่นทำความผิดหรือแสวงหาประโยชน์\"",
+                choices: ["ชี้โพรงให้กระรอก", "จุดไฟในกะลา", "ปล่อยปลาลงน้ำ", "ชักศึกเข้าบ้าน"],
+                answer: "ชี้โพรงให้กระรอก",
+                explanation: "ชี้โพรงให้กระรอก หมายถึง บอกช่องทางให้คนอื่นทำความผิดหรือเอาเปรียบ"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"คนที่ดูหน้าตา ยิ้มแย้มเมตตา แต่จิตใจโหดร้าย\"",
+                choices: ["หน้าเนื้อใจเสือ", "ปากหวานก้นเปรี้ยว", "มือสะอาดใจดำ", "เสือซ่อนเล็บ"],
+                answer: "หน้าเนื้อใจเสือ",
+                explanation: "หน้าเนื้อใจเสือ หมายถึง คนที่มีท่าทีใจดีแต่จิตใจคดโกงโหดร้าย"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การทำงานที่ยากลำบากอย่างยิ่งและต้องใช้ความพยายามมาก\"",
+                choices: ["เข็นครกขึ้นภูเขา", "งมเข็มในมหาสมุทร", "ว่ายน้ำข้ามทะเล", "ปีนเขาด้วยมือเปล่า"],
+                answer: "เข็นครกขึ้นภูเขา",
+                explanation: "เข็นครกขึ้นภูเขา หมายถึง การทำงานยากลำบากเกินความสามารถที่ต้องเพียรพยายามสูง"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การค้นหาสิ่งของที่ยากมากจนแทบหาไม่เจอ\"",
+                choices: ["งมเข็มในมหาสมุทร", "ควานหาในความมืด", "จับปูดำในนา", "ดำน้ำหาแหวน"],
+                answer: "งมเข็มในมหาสมุทร",
+                explanation: "งมเข็มในมหาสมุทร หมายถึง ค้นหาสิ่งที่หายากยิ่งในพื้นที่กว้างใหญ่"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การประพฤติตนตามประเพณีของสถานที่ที่ตนไปอยู่\"",
+                choices: ["เข้าเมืองตาหลิ่ว ต้องหลิ่วตาตาม", "เข้าเมืองไหนให้กวาดบ้าน", "ไปไหนมาสามวาสองศอก", "เดินตามผู้ใหญ่หมาไม่กัด"],
+                answer: "เข้าเมืองตาหลิ่ว ต้องหลิ่วตาตาม",
+                explanation: "เข้าเมืองตาหลิ่ว ต้องหลิ่วตาตาม หมายถึง วางตัวและปรับตนให้เข้ากับคนในสังคมนั้น"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การเชื่อฟังผู้มีประสบการณ์ย่อมปลอดภัย\"",
+                choices: ["เดินตามผู้ใหญ่ หมาไม่กัด", "อาบน้ำร้อนมาก่อน", "ฟังหูไว้หู", "เชื่อผู้ใหญ่ได้ดี"],
+                answer: "เดินตามผู้ใหญ่ หมาไม่กัด",
+                explanation: "เดินตามผู้ใหญ่ หมาไม่กัด หมายถึง ประพฤติตามผู้ใหญ่หรือผู้มีประสบการณ์ย่อมปลอดภัย"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"คนที่เกิดก่อนจึงมีประสบการณ์ชีวิตมากกว่า\"",
+                choices: ["อาบน้ำร้อนมาก่อน", "เกลือจิ้มเกลือ", "ขิงก็รา ข่าก็แรง", "กินข้าวมากกว่าแป้ง"],
+                answer: "อาบน้ำร้อนมาก่อน",
+                explanation: "อาบน้ำร้อนมาก่อน หมายถึง มีประสบการณ์ชีวิตมากกว่าเพราะเกิดก่อน"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"คนสองฝ่ายที่มีอารมณ์รุนแรงไม่ยอมลดละให้กัน\"",
+                choices: ["ขิงก็รา ข่าก็แรง", "หนูตกถังข้าวสาร", "ไม้ซีกงัดไม้แผ่น", "ไก่เห็นนมงู งูเห็นนมไก่"],
+                answer: "ขิงก็รา ข่าก็แรง",
+                explanation: "ขิงก็รา ข่าก็แรง หมายถึง ต่างฝ่ายต่างจัดจ้านพอๆ กัน ไม่ยอมลดละให้กัน"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"คนสองฝ่ายต่างรู้ความลับหรือรู้ทันกัน\"",
+                choices: ["ไก่เห็นนมงู งูเห็นนมไก่", "มองตาเสน่หา", "เกลือจิ้มเกลือ", "คมในฟาง"],
+                answer: "ไก่เห็นนมงู งูเห็นนมไก่",
+                explanation: "ไก่เห็นนมงู งูเห็นนมไก่ หมายถึง ต่างฝ่ายต่างรู้ตื้นลึกหนาบางของกันและกัน"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"ผู้ชายยากจนได้แต่งงานกับหญิงร่ำรวย\"",
+                choices: ["หนูตกถังข้าวสาร", "ตกถังทองคำ", "ส้มล้มใส่จาน", "กิ้งก่าได้ทอง"],
+                answer: "หนูตกถังข้าวสาร",
+                explanation: "หนูตกถังข้าวสาร หมายถึง ชายที่มีฐานะยากจนได้แต่งงานกับผู้หญิงร่ำรวย"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"คนที่ได้ดีแล้วเย่อหยิ่งอวดดี ลืมตัว\"",
+                choices: ["กิ้งก่าได้ทอง", "วัวลืมตัว", "คางคกขึ้นกอปร", "นกกระเรียนบินสูง"],
+                answer: "กิ้งก่าได้ทอง",
+                explanation: "กิ้งก่าได้ทอง หมายถึง คนที่ได้รับลาภยศแล้วแสดงอาการเย่อหยิ่งลืมตัว"
+            },
+            {
+                question: "สำนวนใดหมายถึง \"การตัดปัญหาหรือกำจัดต้นเหตุตั้งแต่เนิ่นๆ\"",
+                choices: ["ตัดไฟแต่ต้นลม", "เด็ดดอกไม้ร่วง", "จับปลาในตลิ่ง", "กวาดขยะใต้พรม"],
+                answer: "ตัดไฟแต่ต้นลม",
+                explanation: "ตัดไฟแต่ต้นลม หมายถึง การกำจัดต้นเหตุเพื่อไม่ให้เรื่องราวบานปลาย"
+            }
+        ];
+    </script>
+
+    <!-- MAIN GAME LOGIC & AR ENGINE -->
+    <script>
+        // DOM Elements
+        const gameContainer = document.getElementById('game-container');
+        const gameCanvas = document.getElementById('game-canvas');
+        const gameCtx = gameCanvas.getContext('2d');
+        const handCanvas = document.getElementById('hand-canvas');
+        const handCtx = handCanvas.getContext('2d');
+        const videoElement = document.getElementById('webcam');
+
+        // UI Elements
+        const startScreen = document.getElementById('start-screen');
+        const countdownScreen = document.getElementById('countdown-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const topBarContainer = document.getElementById('top-bar-container');
+        const questionCard = document.getElementById('question-card');
+        const playerNameInput = document.getElementById('player-name-input');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const screenshotBtn = document.getElementById('screenshot-btn');
+        
+        const playerDisplayName = document.getElementById('player-display-name');
+        const ammoBadge = document.getElementById('ammo-badge');
+        const ammoIcons = document.getElementById('ammo-icons');
+        const scoreText = document.getElementById('score-text');
+        const hitsText = document.getElementById('hits-text');
+        const timerText = document.getElementById('timer-text');
+        const questionText = document.getElementById('question-text');
+        const comboText = document.getElementById('combo-text');
+        const toastText = document.getElementById('toast-text');
+        const explanationBox = document.getElementById('explanation-box');
+        const explanationText = document.getElementById('explanation-text');
+        const controlModeBadge = document.getElementById('control-mode-badge');
+
+        const resPlayerName = document.getElementById('res-player-name');
+        const resScore = document.getElementById('res-score');
+        const resHits = document.getElementById('res-hits');
+        const resEvaluation = document.getElementById('res-evaluation');
+
+        // Game State Variables
+        let playerName = "";
+        let score = 0;
+        let ducksHit = 0;
+        let comboCount = 0;
+        let currentBullets = 2; // 2 Bullets Rule
+        let gameTimeLeft = 120; // 2 Minutes
+        let gameTimerInterval = null;
+        let isPlaying = false;
+        let currentQuestion = null;
+        let usedQuestionIndices = [];
+
+        // Cursor & Tracking
+        let cursor = { x: -100, y: -100, isHovering: false, state: 'normal', isPinching: false, pinchTriggered: false, clickTriggered: false };
+        let hideCursorTimer = null; // Timer for hiding cursor after shot
+        let isHandDetected = false;
+        let handLandmarks = null;
+
+        // Animation Props
+        let animFrameTime = 0;
+        let ducks = [];
+        let particles = [];
+        let clouds = [];
+        let backgroundBirds = [];
+
+        // Forest Pre-calculation for density
+        let forestTrees = [];
+
+        // Canvas Responsive Resizing
+        function resizeCanvas() {
+            const rect = gameContainer.getBoundingClientRect();
+            gameCanvas.width = rect.width;
+            gameCanvas.height = rect.height;
+            handCanvas.width = rect.width;
+            handCanvas.height = rect.height;
+            generateForestPositions();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Generate static positions for dense background trees to save calculation per frame
+        function generateForestPositions() {
+            forestTrees = [];
+            const w = gameCanvas.width || 1280;
+            // Generate ~15 random trees for the dense forest look
+            for(let i = 0; i < 16; i++) {
+                forestTrees.push({
+                    type: Math.floor(Math.random() * 4), // 0: round, 1: pine, 2: tall, 3: small round
+                    x: Math.random() * (w + 200) - 100,
+                    scale: Math.random() * 0.4 + 0.6,
+                    depth: Math.random() // for sorting/parallax if needed
+                });
+            }
+            // Sort by depth so closer trees render in front
+            forestTrees.sort((a,b) => a.depth - b.depth);
+        }
+
+        // Initialize Environment Props
+        for (let i = 0; i < 5; i++) {
+            clouds.push({
+                x: Math.random() * 1200,
+                y: Math.random() * 100 + 20,
+                speed: Math.random() * 0.3 + 0.1,
+                size: Math.random() * 25 + 30
+            });
+        }
+        for (let i = 0; i < 4; i++) {
+            backgroundBirds.push({
+                x: Math.random() * 1000,
+                y: Math.random() * 100 + 50,
+                speed: Math.random() * 1.0 + 0.8,
+                wing: Math.random() * Math.PI
+            });
+        }
+
+        // -------------------------------------------------------------
+        // DUCK CLASS (Very Slow Flight for easy target)
+        // -------------------------------------------------------------
+        class Duck {
+            constructor(text, isCorrect, index, totalDucks) {
+                this.text = text;
+                this.isCorrect = isCorrect;
+                
+                const w = gameCanvas.width || 1000;
+                const h = gameCanvas.height || 600;
+
+                const topBarRect = questionCard.getBoundingClientRect();
+                const containerRect = gameContainer.getBoundingClientRect();
+                const topUIBottom = (topBarRect.bottom - containerRect.top) || 160;
+
+                this.minY = topUIBottom + 20; 
+                this.maxY = h * 0.60;          
+
+                const sectionWidth = (w - 150) / totalDucks;
+                this.x = 75 + index * sectionWidth + (Math.random() * 20 - 10);
+                this.y = this.minY + Math.random() * (this.maxY - this.minY - 20);
+
+                // ULTRA SLOW SPEED
+                this.vx = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 0.4 + 0.5);
+                this.vy = (Math.random() - 0.5) * 0.3;
+
+                this.wingAngle = Math.random() * Math.PI;
+                this.wingSpeed = 0.15; 
+                this.isFalling = false;
+                this.isEscaping = false;
+                this.opacity = 1;
+                this.rotation = 0;
+            }
+
+            update() {
+                if (this.isFalling) {
+                    this.y += 8;
+                    this.rotation += 0.1;
+                    this.opacity -= 0.04;
+                    return;
+                }
+                if (this.isEscaping) {
+                    this.x += this.vx * 3;
+                    this.y -= 5;
+                    this.wingSpeed = 0.4;
+                    return;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                const padding = 60;
+                if (this.x < padding) { this.x = padding; this.vx *= -1; }
+                if (this.x > gameCanvas.width - padding) { this.x = gameCanvas.width - padding; this.vx *= -1; }
+                if (this.y < this.minY) { this.y = this.minY; this.vy *= -1; }
+                if (this.y > this.maxY) { this.y = this.maxY; this.vy *= -1; }
+
+                this.wingAngle += this.wingSpeed;
+            }
+
+            draw(ctx) {
+                if (this.opacity <= 0) return;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.opacity);
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                const facingLeft = this.vx < 0;
+                if (facingLeft) ctx.scale(-1, 1);
+
+                ctx.beginPath();
+                ctx.ellipse(0, 32, 22, 6, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 28, 18, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#f59e0b';
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#78350f';
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(-20, -4);
+                ctx.lineTo(-36, -14);
+                ctx.lineTo(-24, 4);
+                ctx.fillStyle = '#d97706';
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(18, -14, 15, 0, Math.PI * 2);
+                ctx.fillStyle = '#059669';
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(23, -17, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(25, -17, 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#0f172a';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(32, -10, 10, 5, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#ef4444';
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(-2, -2);
+                ctx.rotate(Math.sin(this.wingAngle) * 0.5);
+                ctx.beginPath();
+                ctx.ellipse(-4, -6, 14, 8, -0.3, 0, Math.PI * 2);
+                ctx.fillStyle = '#b45309';
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                if (!this.isFalling) {
+                    ctx.save();
+                    if (facingLeft) ctx.scale(-1, 1);
+
+                    ctx.font = 'bold 15px "Prompt", sans-serif';
+                    const textWidth = ctx.measureText(this.text).width;
+                    const boxWidth = Math.max(textWidth + 20, 100);
+                    const boxHeight = 32;
+                    const boxX = -boxWidth / 2;
+                    const boxY = 32;
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, 12);
+                    ctx.lineTo(0, boxY);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.roundRect(boxX + 3, boxY + 3, boxWidth, boxHeight, 10);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 10);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#059669';
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.text, 0, boxY + boxHeight / 2 + 1);
+
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+
+            containsPoint(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return (Math.abs(dx) < 55 && dy > -30 && dy < 75);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // PARTICLES
+        // -------------------------------------------------------------
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 6 + 4;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.alpha = 1;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy; this.alpha -= 0.04;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color; ctx.fill(); ctx.restore();
+            }
+        }
+
+        function createShotEffect(x, y, isCorrect) {
+            const color = isCorrect ? '#10b981' : '#ef4444';
+            for (let i = 0; i < 20; i++) particles.push(new Particle(x, y, color));
+        }
+
+        // -------------------------------------------------------------
+        // ADVANCED PROCEDURAL CARTOON TREES
+        // -------------------------------------------------------------
+        
+        function drawFoliageCluster(ctx, cx, cy, r) {
+            ctx.fillStyle = '#317220';
+            ctx.beginPath(); ctx.arc(cx, cy + r*0.1, r, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#54a631';
+            ctx.beginPath(); ctx.arc(cx, cy - r*0.1, r * 0.95, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#7ac94b';
+            ctx.beginPath(); ctx.arc(cx - r*0.15, cy - r*0.3, r * 0.5, 0, Math.PI*2); ctx.fill();
+
+            ctx.strokeStyle = '#317220';
+            ctx.lineWidth = Math.max(2, r*0.05);
+            ctx.lineCap = 'round';
+            ctx.beginPath(); 
+            ctx.arc(cx + r*0.2, cy + r*0.1, r*0.15, Math.PI, Math.PI*1.8);
+            ctx.stroke();
+        }
+
+        function drawCartoonOakTree(ctx, x, y, scale, wind) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.rotate(wind * 0.05);
+
+            ctx.fillStyle = '#317220'; 
+            ctx.beginPath(); ctx.ellipse(0, 0, 45, 12, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#54a631'; 
+            ctx.beginPath(); ctx.ellipse(0, -3, 40, 10, 0, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#9ca3af';
+            ctx.beginPath(); ctx.arc(-25, 0, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(20, 2, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+            ctx.fillStyle = '#a06a3d';
+            ctx.strokeStyle = '#2d1a11';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.quadraticCurveTo(-10, -30, -5, -60);
+            ctx.lineTo(5, -60);
+            ctx.quadraticCurveTo(10, -30, 15, 0);
+            ctx.fill(); ctx.stroke();
+            
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(-2, -50); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(5, -3); ctx.lineTo(3, -55); ctx.stroke();
+
+            const clusters = [
+                {x: 0, y: -120, r: 45},
+                {x: -35, y: -90, r: 40},
+                {x: 35, y: -90, r: 40},
+                {x: -25, y: -55, r: 30},
+                {x: 25, y: -55, r: 30},
+                {x: 0, y: -70, r: 45} 
+            ];
+
+            ctx.fillStyle = '#143815'; 
+            clusters.forEach(c => {
+                ctx.beginPath(); ctx.arc(c.x, c.y, c.r + 5, 0, Math.PI*2); ctx.fill();
+            });
+
+            clusters.forEach(c => {
+                drawFoliageCluster(ctx, c.x, c.y, c.r);
+            });
+
+            ctx.restore();
+        }
+
+        function drawCartoonPineTree(ctx, x, y, scale, wind) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.rotate(wind * 0.03);
+
+            ctx.fillStyle = '#317220'; 
+            ctx.beginPath(); ctx.ellipse(0, 0, 35, 10, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#54a631'; 
+            ctx.beginPath(); ctx.ellipse(0, -2, 30, 8, 0, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = '#8b5a2b';
+            ctx.strokeStyle = '#2d1a11';
+            ctx.lineWidth = 3;
+            ctx.fillRect(-8, -30, 16, 30);
+            ctx.strokeRect(-8, -30, 16, 30);
+
+            const layers = [
+                {y: -25, w: 55, h: 45},
+                {y: -55, w: 45, h: 40},
+                {y: -85, w: 35, h: 40},
+                {y: -115, w: 25, h: 40}
+            ];
+
+            ctx.strokeStyle = '#143815';
+            ctx.lineWidth = 5;
+            ctx.lineJoin = 'round';
+
+            layers.forEach((l, idx) => {
+                ctx.beginPath();
+                ctx.moveTo(0, l.y - l.h);
+                ctx.lineTo(-l.w, l.y);
+                ctx.lineTo(-l.w*0.5, l.y - 5);
+                ctx.lineTo(0, l.y + 5);
+                ctx.lineTo(l.w*0.5, l.y - 5);
+                ctx.lineTo(l.w, l.y);
+                ctx.closePath();
+                ctx.stroke();
+
+                ctx.fillStyle = '#22c55e';
+                ctx.fill();
+                
+                ctx.fillStyle = '#15803d';
+                ctx.beginPath();
+                ctx.moveTo(0, l.y - l.h + 15);
+                ctx.lineTo(-l.w+8, l.y-2);
+                ctx.lineTo(0, l.y+3);
+                ctx.lineTo(l.w-8, l.y-2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+        }
+
+        // -------------------------------------------------------------
+        // BACKGROUND SCENERY COMPOSITION
+        // -------------------------------------------------------------
+        function drawBackground(ctx, width, height) {
+            animFrameTime += 0.02;
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height*0.7);
+            skyGrad.addColorStop(0, '#38bdf8');
+            skyGrad.addColorStop(1, '#e0f2fe');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.translate(width - 100, 80);
+            const sunGlow = Math.sin(animFrameTime * 2) * 4;
+            ctx.beginPath(); ctx.arc(0, 0, 45 + sunGlow * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#fde047'; ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 65 + sunGlow, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(254, 224, 71, 0.2)'; ctx.fill();
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            clouds.forEach(c => {
+                c.x += c.speed;
+                if (c.x > width + 100) c.x = -100;
+                ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size*0.7, c.y - c.size*0.2, c.size*0.8, 0, Math.PI*2);
+                ctx.arc(c.x + c.size*1.3, c.y, c.size*0.7, 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+            backgroundBirds.forEach(b => {
+                b.x += b.speed;
+                if (b.x > width + 50) b.x = -50;
+                b.wing += 0.15;
+                const wy = Math.sin(b.wing) * 4;
+                ctx.beginPath(); ctx.moveTo(b.x-6, b.y+wy);
+                ctx.quadraticCurveTo(b.x-3, b.y-3, b.x, b.y);
+                ctx.quadraticCurveTo(b.x+3, b.y-3, b.x+6, b.y+wy);
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = '#94a3b8'; 
+            ctx.beginPath(); ctx.moveTo(0, height * 0.65);
+            ctx.lineTo(width * 0.2, height * 0.45); ctx.lineTo(width * 0.5, height * 0.65);
+            ctx.lineTo(width * 0.8, height * 0.42); ctx.lineTo(width, height * 0.6);
+            ctx.lineTo(width, height); ctx.lineTo(0, height); ctx.fill();
+            
+            ctx.fillStyle = '#cbd5e1'; 
+            ctx.beginPath(); ctx.moveTo(width*0.2, height*0.45); ctx.lineTo(width*0.15, height*0.5); ctx.lineTo(width*0.25, height*0.5); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(width*0.8, height*0.42); ctx.lineTo(width*0.75, height*0.48); ctx.lineTo(width*0.85, height*0.48); ctx.fill();
+
+            const riverY = height * 0.72;
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.moveTo(0, riverY);
+            ctx.quadraticCurveTo(width * 0.5, riverY - 15, width, riverY + 10);
+            ctx.lineTo(width, height); ctx.lineTo(0, height); ctx.fill();
+
+            const baseY = height * 0.82;
+            const wind = Math.sin(animFrameTime) * 0.1;
+
+            forestTrees.forEach(tree => {
+                const treeY = baseY - 40 + (tree.depth * 60); 
+                if (tree.type === 0 || tree.type === 3) {
+                    drawCartoonOakTree(ctx, tree.x, treeY, tree.scale, wind * tree.depth);
+                } else if (tree.type === 1 || tree.type === 2) {
+                    drawCartoonPineTree(ctx, tree.x, treeY, tree.scale * 1.2, wind * tree.depth);
+                }
+            });
+
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath(); ctx.moveTo(0, height * 0.88);
+            ctx.quadraticCurveTo(width * 0.5, height * 0.85, width, height * 0.89);
+            ctx.lineTo(width, height); ctx.lineTo(0, height); ctx.fill();
+        }
+
+        // -------------------------------------------------------------
+        // GAME LOGIC, AMMO & QUESTION MANAGEMENT
+        // -------------------------------------------------------------
+        function updateAmmoDisplay() {
+            if (currentBullets === 2) {
+                ammoIcons.innerText = "💥💥";
+                ammoBadge.className = "text-[10px] sm:text-xs font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 flex items-center gap-1 shadow-sm transition-all";
+            } else if (currentBullets === 1) {
+                ammoIcons.innerText = "💥⚪";
+                ammoBadge.className = "text-[10px] sm:text-xs font-black text-rose-900 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-300 flex items-center gap-1 shadow-sm transition-all scale-105";
+            } else {
+                ammoIcons.innerText = "⚪⚪";
+                ammoBadge.className = "text-[10px] sm:text-xs font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300 flex items-center gap-1 shadow-sm transition-all";
+            }
+        }
+
+        function reloadAmmo() {
+            currentBullets = 2;
+            updateAmmoDisplay();
+            sound.playReload();
+        }
+
+        function loadNewQuestion() {
+            reloadAmmo();
+
+            if (usedQuestionIndices.length >= questionDatabase.length) {
+                usedQuestionIndices = [];
+            }
+            let randomIndex;
+            do { randomIndex = Math.floor(Math.random() * questionDatabase.length); } 
+            while (usedQuestionIndices.includes(randomIndex));
+
+            usedQuestionIndices.push(randomIndex);
+            currentQuestion = questionDatabase[randomIndex];
+
+            questionText.innerText = currentQuestion.question;
+            explanationBox.classList.add('hidden');
+
+            ducks = [];
+            const shuffledChoices = [...currentQuestion.choices].sort(() => Math.random() - 0.5);
+
+            shuffledChoices.forEach((choice, idx) => {
+                const isCorrect = (choice === currentQuestion.answer);
+                ducks.push(new Duck(choice, isCorrect, idx, shuffledChoices.length));
+            });
+        }
+
+        function handleShot(duck) {
+            if (currentBullets <= 0) return; // Prevent shooting if no ammo
+            if (hideCursorTimer) return; // Prevent shooting if cursor is currently hidden
+
+            sound.playGunshot();
+            cursor.state = 'hit';
+            currentBullets--;
+            updateAmmoDisplay();
+
+            // NEW: Immediately hide cursor after firing
+            cursor.x = -1000;
+            cursor.y = -1000;
+
+            if (duck.isCorrect) {
+                // Correct
+                sound.playCorrect();
+                duck.isFalling = true;
+                score += 10;
+                ducksHit++;
+                comboCount++;
+
+                scoreText.innerText = score;
+                hitsText.innerText = ducksHit;
+
+                showToast("🎉 ถูกต้อง!", "bg-emerald-600");
+                if (comboCount > 1) showCombo(`COMBO x${comboCount}!`);
+
+                explanationText.innerText = currentQuestion.explanation;
+                explanationBox.classList.remove('hidden');
+                createShotEffect(duck.x, duck.y, true);
+
+                // Set timer to re-enable cursor & load next question
+                hideCursorTimer = setTimeout(() => {
+                    hideCursorTimer = null;
+                    if (isPlaying) loadNewQuestion();
+                }, 1800);
+
+            } else {
+                // Wrong
+                sound.playWrong();
+                duck.isEscaping = true;
+                comboCount = 0;
+                cursor.state = 'miss';
+                createShotEffect(duck.x, duck.y, false);
+
+                if (currentBullets <= 0) {
+                    showToast("⚠️ กระสุนหมด! เปลี่ยนคำถามใหม่", "bg-rose-700");
+                    hideCursorTimer = setTimeout(() => {
+                        hideCursorTimer = null;
+                        if (isPlaying) loadNewQuestion();
+                    }, 1500);
+                } else {
+                    showToast("❌ ยังไม่ใช่ ลองใหม่!", "bg-rose-500");
+                    // Restore cursor sooner if player still has ammo
+                    hideCursorTimer = setTimeout(() => {
+                        hideCursorTimer = null;
+                    }, 500);
+                }
+            }
+        }
+
+        function showToast(msg, bgColor) {
+            toastText.innerText = msg;
+            toastText.className = `text-xl sm:text-3xl font-black text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-full shadow-2xl transition-all duration-300 ${bgColor}`;
+            toastText.style.opacity = '1';
+            setTimeout(() => { toastText.style.opacity = '0'; }, 1400);
+        }
+
+        function showCombo(msg) {
+            comboText.innerText = msg;
+            comboText.style.transform = 'scale(1)';
+            setTimeout(() => { comboText.style.transform = 'scale(0)'; }, 1100);
+        }
+
+        // -------------------------------------------------------------
+        // TIMER & LIFECYCLE (2 MINUTES COUNTDOWN)
+        // -------------------------------------------------------------
+        function startCountdown() {
+            startScreen.classList.add('hidden');
+            countdownScreen.classList.remove('hidden');
+
+            let count = 3;
+            const countEl = document.getElementById('countdown-text');
+            countEl.innerText = count;
+            sound.playBeep(440, 0.1);
+
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countEl.innerText = count; sound.playBeep(440, 0.1);
+                } else if (count === 0) {
+                    countEl.innerText = "GO!"; sound.playBeep(880, 0.3);
+                } else {
+                    clearInterval(timer);
+                    countdownScreen.classList.add('hidden');
+                    startGameplay();
+                }
+            }, 1000);
+        }
+
+        function startGameplay() {
+            isPlaying = true;
+            score = 0; ducksHit = 0; comboCount = 0;
+            gameTimeLeft = 120; // 2 Minutes
+            hideCursorTimer = null; // Ensure cursor starts active
+
+            scoreText.innerText = "0"; hitsText.innerText = "0";
+            timerText.innerText = "02:00";
+            topBarContainer.classList.remove('-translate-y-24', 'opacity-0');
+
+            loadNewQuestion();
+            sound.startBGM(); // NEW: Start background music
+
+            clearInterval(gameTimerInterval);
+            gameTimerInterval = setInterval(() => {
+                gameTimeLeft--;
+                const mins = Math.floor(gameTimeLeft / 60).toString().padStart(2, '0');
+                const secs = (gameTimeLeft % 60).toString().padStart(2, '0');
+                timerText.innerText = `${mins}:${secs}`;
+
+                if (gameTimeLeft <= 10) sound.playBeep(600, 0.05);
+                if (gameTimeLeft <= 0) {
+                    clearInterval(gameTimerInterval); endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameTimerInterval);
+            hideCursorTimer = null;
+            sound.stopBGM(); // NEW: Stop background music
+
+            resPlayerName.innerText = playerName;
+            resScore.innerText = score;
+            resHits.innerText = `${ducksHit} ตัว`;
+
+            if (score >= 180) resEvaluation.innerText = "🌟 สุดยอดแฟนพันธุ์แท้สำนวนไทย!";
+            else if (score >= 100) resEvaluation.innerText = "🎉 ยอดเยี่ยม! มีความรู้สำนวนไทยแน่นมาก";
+            else resEvaluation.innerText = "👍 พยายามได้ดี! ฝึกฝนบ่อยๆ จะเก่งยิ่งขึ้น";
+
+            resultScreen.classList.remove('hidden');
+            sound.playBeep(523, 0.4);
+        }
+
+        // -------------------------------------------------------------
+        // RENDER LOOP
+        // -------------------------------------------------------------
+        function gameLoop() {
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            drawBackground(gameCtx, gameCanvas.width, gameCanvas.height);
+
+            // Process user input trigger (Pinch or Click)
+            let attemptShot = cursor.pinchTriggered || cursor.clickTriggered;
+            cursor.pinchTriggered = false;
+            cursor.clickTriggered = false;
+
+            if (isPlaying) {
+                // Ensure we only process logic if cursor is not artificially hidden
+                if (!hideCursorTimer) {
+                    cursor.isHovering = false;
+                    let hitDuck = null;
+
+                    ducks.forEach(duck => {
+                        duck.update(); 
+                        duck.draw(gameCtx);
+                        if (!duck.isFalling && !duck.isEscaping && duck.containsPoint(cursor.x, cursor.y)) {
+                            cursor.isHovering = true;
+                            hitDuck = duck; // Found target duck
+                        }
+                    });
+
+                    // Handle Firing Logic
+                    if (attemptShot) {
+                        if (hitDuck) {
+                            handleShot(hitDuck); // Shot a duck
+                        } else {
+                            // Shot Empty Air
+                            if (currentBullets > 0) {
+                                sound.playGunshot();
+                                currentBullets--;
+                                updateAmmoDisplay();
+                                cursor.state = 'miss';
+                                createShotEffect(cursor.x, cursor.y, false);
+                                
+                                cursor.x = -1000; cursor.y = -1000; // Hide cursor
+
+                                if (currentBullets <= 0) {
+                                    showToast("⚠️ ยิงวืดหมด! เปลี่ยนคำถามใหม่", "bg-rose-700");
+                                    hideCursorTimer = setTimeout(() => {
+                                        hideCursorTimer = null;
+                                        if (isPlaying) loadNewQuestion();
+                                    }, 1500);
+                                } else {
+                                    showToast("💨 ยิงวืด!", "bg-slate-500");
+                                    hideCursorTimer = setTimeout(() => { hideCursorTimer = null; }, 400);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Just draw ducks if cursor is hidden (during animation)
+                     ducks.forEach(duck => {
+                        duck.update(); 
+                        duck.draw(gameCtx);
+                    });
+                }
+
+                ducks = ducks.filter(d => d.opacity > 0 && d.y < gameCanvas.height + 150);
+                if (ducks.length === 0 && !hideCursorTimer) loadNewQuestion(); // Add safeguard
+
+                particles.forEach(p => { p.update(); p.draw(gameCtx); });
+                particles = particles.filter(p => p.alpha > 0);
+            }
+            drawCursor(handCtx);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function drawCursor(ctx) {
+            ctx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+            
+            if (isHandDetected && handLandmarks) {
+                // Only draw skeleton if cursor isn't hidden by a shot
+                if (!hideCursorTimer) drawHandSkeleton(ctx, handLandmarks);
+            }
+            
+            // Don't draw the circle aim if hidden
+            if (cursor.x < 0 || cursor.y < 0 || hideCursorTimer) return;
+
+            ctx.save(); ctx.translate(cursor.x, cursor.y);
+            ctx.beginPath(); 
+            
+            // Visual feedback for Pinching
+            if (cursor.isPinching) {
+                ctx.arc(0, 0, 14, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.6)'; // Red grip
+                ctx.strokeStyle = '#e11d48';
+            } else if (cursor.state === 'hit') { 
+                ctx.arc(0, 0, 24, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.5)'; ctx.strokeStyle = '#10b981'; 
+            } else if (cursor.state === 'miss') { 
+                ctx.arc(0, 0, 24, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.5)'; ctx.strokeStyle = '#ef4444'; 
+            } else if (cursor.isHovering) { 
+                ctx.arc(0, 0, 24, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.5)'; ctx.strokeStyle = '#f59e0b'; 
+            } else { 
+                ctx.arc(0, 0, 24, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.35)'; ctx.strokeStyle = '#0284c7'; 
+            }
+            
+            ctx.fill(); ctx.lineWidth = 4; ctx.stroke();
+
+            ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff'; ctx.fill();
+            ctx.restore();
+        }
+
+        function drawHandSkeleton(ctx, landmarks) {
+            ctx.save(); ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)'; ctx.lineWidth = 3;
+            const connections = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
+            const w = handCanvas.width; const h = handCanvas.height;
+            connections.forEach(([i, j]) => {
+                ctx.beginPath(); ctx.moveTo((1 - landmarks[i].x) * w, landmarks[i].y * h);
+                ctx.lineTo((1 - landmarks[j].x) * w, landmarks[j].y * h); ctx.stroke();
+            });
+
+            // NEW: Highlight pinch line between Thumb (4) and Index (8)
+            ctx.beginPath();
+            ctx.moveTo((1 - landmarks[4].x) * w, landmarks[4].y * h);
+            ctx.lineTo((1 - landmarks[8].x) * w, landmarks[8].y * h);
+            ctx.strokeStyle = cursor.isPinching ? '#f43f5e' : '#fde047'; // Red if pinched, Yellow if open
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            landmarks.forEach((pt, idx) => {
+                ctx.beginPath(); ctx.arc((1 - pt.x) * w, pt.y * h, (idx === 8 || idx === 4) ? 9 : 4, 0, Math.PI * 2);
+                ctx.fillStyle = (idx === 8 || idx === 4) ? '#f59e0b' : '#ffffff'; ctx.fill();
+            });
+            ctx.restore();
+        }
+
+        // -------------------------------------------------------------
+        // AR & INPUT SETUP
+        // -------------------------------------------------------------
+        function initMediaPipe() {
+            const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+            hands.onResults((results) => {
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    isHandDetected = true; handLandmarks = results.multiHandLandmarks[0];
+                    
+                    const thumbTip = handLandmarks[4];
+                    const indexTip = handLandmarks[8];
+                    const w = gameCanvas.width;
+                    const h = gameCanvas.height;
+
+                    if (!hideCursorTimer) {
+                        // Put cursor midpoint between thumb and index
+                        cursor.x = (1 - ((thumbTip.x + indexTip.x) / 2)) * w;
+                        cursor.y = ((thumbTip.y + indexTip.y) / 2) * h;
+                    }
+
+                    // Calculate Pinch Distance
+                    const dx = thumbTip.x - indexTip.x;
+                    const dy = thumbTip.y - indexTip.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const currentlyPinching = distance < 0.06; // 6% Pinch Threshold
+
+                    if (currentlyPinching && !cursor.isPinching) {
+                        cursor.pinchTriggered = true; // Fire shot!
+                    }
+                    cursor.isPinching = currentlyPinching;
+
+                    controlModeBadge.innerText = "📷 โหมดควบคุม: กล้อง AR (จีบนิ้วยิง)";
+                    controlModeBadge.className = "glass-panel text-[10px] sm:text-xs font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-emerald-800 shadow-md border border-white";
+                } else { isHandDetected = false; handLandmarks = null; cursor.isPinching = false; }
+            });
+            const camera = new Camera(videoElement, { onFrame: async () => { await hands.send({ image: videoElement }); }, width: 1280, height: 720 });
+            camera.start().catch((err) => {
+                console.warn("Camera fallback.", err);
+                controlModeBadge.innerText = "🖱️ โหมดควบคุม: เมาส์ / สัมผัส (คลิกเพื่อยิง)";
+                controlModeBadge.className = "glass-panel text-[10px] sm:text-xs font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-amber-800 shadow-md border border-white";
+            });
+        }
+
+        function setupFallbackControls() {
+            const updateCursor = (e) => {
+                if (isHandDetected || hideCursorTimer) return; // Ignore if hidden
+                const rect = gameContainer.getBoundingClientRect();
+                cursor.x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                cursor.y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            };
+            gameContainer.addEventListener('mousemove', updateCursor);
+            gameContainer.addEventListener('touchmove', updateCursor, { passive: true });
+            gameContainer.addEventListener('touchstart', updateCursor, { passive: true });
+            gameContainer.addEventListener('click', (e) => {
+                updateCursor(e);
+                if (isPlaying && !isHandDetected && !hideCursorTimer) {
+                    cursor.clickTriggered = true; // Trigger fallback shot
+                }
+            });
+        }
+
+        function generateScreenshot() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640; canvas.height = 440;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ecfdf5'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#059669'; ctx.fillRect(0, 0, canvas.width, 95);
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 30px "Prompt", sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText("🦆 Duck Hunt สำนวนไทย", canvas.width / 2, 45);
+            ctx.font = '16px "Prompt", sans-serif'; ctx.fillText("🏆 สรุปผลการแข่งขันภาษาไทย (กศน.)", canvas.width / 2, 75);
+            ctx.fillStyle = '#ffffff'; ctx.roundRect(40, 115, canvas.width - 80, 230, 16); ctx.fill();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#a7f3d0'; ctx.stroke();
+            ctx.textAlign = 'left'; ctx.fillStyle = '#064e3b'; ctx.font = 'bold 20px "Prompt", sans-serif';
+            ctx.fillText(`👤 ชื่อผู้เล่น: ${playerName}`, 70, 165);
+            ctx.fillText(`⭐ คะแนนรวม: ${score} คะแนน`, 70, 215);
+            ctx.fillText(`🎯 ยิงถูกทั้งหมด: ${ducksHit} ตัว`, 70, 265);
+            ctx.fillText(`⏱️ เวลาที่ใช้: 2 นาที`, 70, 310);
+            ctx.fillStyle = '#fde047'; ctx.roundRect(40, 360, canvas.width - 80, 55, 12); ctx.fill();
+            ctx.fillStyle = '#713f12'; ctx.font = 'bold 18px "Prompt", sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(resEvaluation.innerText, canvas.width / 2, 394);
+            const link = document.createElement('a');
+            link.download = `duck-hunt-${playerName || 'player'}.png`; link.href = canvas.toDataURL("image/png");
+            link.click();
+        }
+
+        // Initialize
+        startBtn.addEventListener('click', () => {
+            const inputVal = playerNameInput.value.trim();
+            if (!inputVal) return alert("กรุณากรอกชื่อผู้เล่นก่อนเริ่มเกมนะครับ!");
+            playerName = inputVal; playerDisplayName.innerText = `ผู้เล่น: ${playerName}`;
+            sound.init(); startCountdown();
+        });
+        restartBtn.addEventListener('click', () => { resultScreen.classList.add('hidden'); startCountdown(); });
+        screenshotBtn.addEventListener('click', generateScreenshot);
+        window.onload = () => {
+            resizeCanvas(); initMediaPipe(); setupFallbackControls(); requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

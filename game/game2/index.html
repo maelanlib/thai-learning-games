@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตกปลาคำแม่ ก กา - AR Educational Game</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts for Thai Child-Friendly Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700;800&display=swap" rel="stylesheet">
+  
+  <!-- MediaPipe Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    * {
+      font-family: 'Mali', cursive, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    /* Mirror styling for camera preview wrapper */
+    .mirror-view {
+      transform: scaleX(-1);
+    }
+    
+    /* Custom CSS Keyframe Animations */
+    @keyframes bounce-gentle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .animate-bounce-gentle {
+      animation: bounce-gentle 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 223, 0, 0.8)); }
+      50% { filter: drop-shadow(0 0 25px rgba(255, 223, 0, 1)); }
+    }
+    .animate-pulse-glow {
+      animation: pulse-glow 1.5s infinite ease-in-out;
+    }
+
+    /* Glassmorphism background styles */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(8px);
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body class="bg-sky-400 overflow-hidden h-screen w-screen m-0 p-0 relative">
+
+  <!-- Container for Video & Canvas Elements -->
+  <div id="game-container" class="relative w-full h-full overflow-hidden">
+    <!-- Camera Feed (Hidden from UI, processed in background) -->
+    <video id="webcam" class="hidden" playsinline></video>
+
+    <!-- Main Game Canvas (Background, Ocean, Fish, Boat, Animations) -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-10"></canvas>
+
+    <!-- MediaPipe Hand Skeleton Overlay Canvas -->
+    <canvas id="handCanvas" class="absolute inset-0 w-full h-full z-20 pointer-events-none"></canvas>
+
+    <!-- Top Status Bar & Score UI -->
+    <div id="ui-header" class="absolute top-4 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
+      <!-- Target Goal Badge -->
+      <div class="glass-panel rounded-full px-5 py-2.5 flex items-center space-x-3 shadow-lg bg-sky-600/60 text-white border-2 border-white/60">
+        <span class="text-3xl animate-bounce-gentle">🎣</span>
+        <div>
+          <h1 class="text-base md:text-lg font-bold tracking-wide">ตกปลาคำแม่ ก กา</h1>
+          <p id="mode-indicator" class="text-xs text-yellow-200">โหมด: กำลังโหลดกล้อง...</p>
+        </div>
+      </div>
+
+      <!-- Player Name, Timer & Score Board -->
+      <div class="flex items-center space-x-3">
+        <!-- Player Name Display -->
+        <div class="glass-card rounded-2xl px-4 py-2 flex items-center space-x-2 border-2 border-sky-300">
+          <span class="text-xl">👶</span>
+          <span id="player-display-name" class="text-base md:text-lg font-bold text-sky-800">ผู้เล่น</span>
+        </div>
+
+        <!-- 60s Countdown Timer -->
+        <div id="timer-badge" class="glass-card rounded-2xl px-4 py-2 flex items-center space-x-2 border-4 border-rose-400">
+          <span class="text-2xl">⏳</span>
+          <span id="timer-counter" class="text-xl md:text-2xl font-extrabold text-rose-600">60</span>
+        </div>
+
+        <!-- Score Board -->
+        <div class="glass-card rounded-2xl px-4 py-2 flex items-center space-x-2 border-4 border-amber-400">
+          <span class="text-2xl">⭐</span>
+          <span id="score-counter" class="text-xl md:text-2xl font-extrabold text-amber-500">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Toast Feedback Notification -->
+    <div id="toast-message" class="absolute top-24 left-1/2 transform -translate-x-1/2 z-40 transition-all duration-300 opacity-0 scale-75 pointer-events-none">
+      <div id="toast-bg" class="bg-green-500 text-white font-extrabold text-xl md:text-2xl px-6 py-3 rounded-full shadow-2xl border-4 border-white flex items-center space-x-3">
+        <span id="toast-icon">🎉</span>
+        <span id="toast-text">เก่งมาก!</span>
+      </div>
+    </div>
+
+    <!-- Start Overlay Screen -->
+    <div id="start-screen" class="absolute inset-0 z-50 flex items-center justify-center bg-sky-900/40 backdrop-blur-md">
+      <div class="glass-card rounded-3xl p-6 md:p-8 max-w-lg w-11/12 text-center shadow-2xl border-4 border-white transform transition-all hover:scale-105">
+        <div class="text-6xl md:text-7xl mb-3 animate-bounce-gentle">🎣 🐟</div>
+        <h1 class="text-3xl md:text-5xl font-extrabold text-sky-600 mb-2 drop-shadow-md">ตกปลาคำแม่ ก กา</h1>
+        <p class="text-gray-700 text-base md:text-lg font-semibold mb-4">
+          จับปลาคำสระไม่มีตัวสะกดขึ้นเรือให้ได้มากที่สุดในเวลา <span class="text-rose-600 font-bold underline">1 นาที (60 วินาที)</span>!
+        </p>
+
+        <!-- Player Name Input -->
+        <div class="mb-5 text-left">
+          <label for="player-name-input" class="block text-sky-900 font-extrabold text-base md:text-lg mb-1">
+            👤 ใส่ชื่อคนเก่งตรงนี้เลย:
+          </label>
+          <input 
+            type="text" 
+            id="player-name-input" 
+            placeholder="พิมพ์ชื่อน้อง..." 
+            value="น้องคนเก่ง"
+            maxlength="15"
+            class="w-full text-center text-xl font-bold py-3 px-4 rounded-2xl border-4 border-sky-300 focus:border-amber-400 focus:outline-none shadow-inner bg-white text-sky-800"
+          >
+        </div>
+
+        <div class="bg-sky-50 rounded-2xl p-3 mb-5 text-left border-2 border-sky-200">
+          <p class="text-sky-800 font-bold text-sm md:text-base mb-1">👆 วิธีเล่นง่ายๆ:</p>
+          <p class="text-gray-600 text-xs md:text-sm">1. ยื่นนิ้วชี้หน้ากล้องเพื่อเลื่อนเบ็ดตกปลา</p>
+          <p class="text-gray-600 text-xs md:text-sm">2. แตะปลายนิ้วชี้ที่ตัวปลาคำแม่ ก กา</p>
+          <p class="text-gray-600 text-xs md:text-sm">3. หรือใช้เมาส์/สัมผัสหน้าจอได้ทันที!</p>
+        </div>
+
+        <button id="start-btn" class="w-full bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white font-extrabold text-2xl md:text-3xl py-3.5 rounded-2xl shadow-lg border-b-8 border-green-700 active:border-b-0 active:translate-y-2 transition-all cursor-pointer">
+          🎮 เริ่มสนุกกันเลย!
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Complete Victory Screen & Result Certificate -->
+    <div id="victory-screen" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-sky-900/60 backdrop-blur-md">
+      <div class="glass-card rounded-3xl p-6 md:p-8 max-w-lg w-11/12 text-center shadow-2xl border-4 border-yellow-300 animate-pulse-glow">
+        <div class="text-6xl mb-2">🏆 ⭐ 🎨</div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-amber-500 mb-1">หมดเวลาแล้ว!</h2>
+        <h3 class="text-xl md:text-2xl font-bold text-sky-600 mb-3">สุดยอดมากๆ จับปลาได้เยอะเลย!</h3>
+
+        <!-- Certificate Result Card -->
+        <div id="result-card" class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 mb-5 border-4 border-amber-300 shadow-md">
+          <p class="text-gray-500 text-sm font-semibold mb-1">ขอปรบมือให้คนเก่ง</p>
+          <p id="result-player-name" class="text-3xl font-black text-sky-700 mb-2">น้องคนเก่ง</p>
+          <div class="flex justify-center items-center space-x-6">
+            <div>
+              <p class="text-xs text-gray-500 font-bold">คะแนนรวม</p>
+              <p id="final-score" class="text-4xl font-black text-amber-500">0</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-bold">ปลาที่ตกได้</p>
+              <p id="final-fish-count" class="text-4xl font-black text-emerald-500">0 ตัว</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Screenshot Capture Button -->
+          <button id="capture-btn" class="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-extrabold text-xl md:text-2xl py-3 rounded-2xl shadow-lg border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all cursor-pointer flex items-center justify-center space-x-2">
+            <span>📸</span>
+            <span>บันทึกภาพรูปคะแนน</span>
+          </button>
+
+          <!-- Play Again Button -->
+          <button id="restart-btn" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-extrabold text-xl md:text-2xl py-3 rounded-2xl shadow-lg border-b-4 border-orange-700 active:border-b-0 active:translate-y-1 transition-all cursor-pointer">
+            🔄 เล่นอีกครั้ง
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. GAME DATA & CONFIGURATION
+       ========================================================================== */
+    // Expanded Mae Kor Kar Words (Words with NO final consonant)
+    const KOKAR_WORDS = [
+      'กา', 'ตา', 'มา', 'ปู', 'งู', 'ปลา', 'โต', 'มือ', 'หู', 'เสือ', 
+      'เรือ', 'ดาว', 'หมา', 'แมว', 'บัว', 'วัว', 'เก้า', 'ไก่', 'ไข่', 'ผู้',
+      'ขา', 'ยา', 'ฟ้า', 'ป่า', 'น่า', 'ม้า', 'พี่', 'ชะ', 'ดี', 'ตู้'
+    ];
+
+    // Distractor Words (Words WITH final consonant - NOT Mae Kor Kar)
+    const DISTRACTOR_WORDS = [
+      'นก', 'บ้าน', 'กิน', 'นอน', 'ลม', 'ลูก', 'ลิง', 'ช้าง', 'เป็ด', 'มด',
+      'ชาม', 'ต้ม', 'เย็น', 'สวย', 'เรียน', 'เพื่อน', 'น้อง', 'สวน'
+    ];
+
+    const FISH_COLORS = [
+      { body: '#FF6B6B', fin: '#FF8E8E' }, // Red Coral
+      { body: '#4ECDC4', fin: '#71E5DE' }, // Turquoise
+      { body: '#FFD166', fin: '#FFE08B' }, // Yellow Sunny
+      { body: '#06D6A0', fin: '#38E9B9' }, // Emerald Green
+      { body: '#118AB2', fin: '#48B2D8' }, // Deep Blue
+      { body: '#FF9F1C', fin: '#FFB74D' }, // Vivid Orange
+      { body: '#A06CD5', fin: '#B98EFF' }  // Purple Violet
+    ];
+
+    const GAME_DURATION_SECONDS = 60; // 1-Minute Countdown
+    const TOTAL_FISH_ON_SCREEN = 8;    // Increased fish count on screen
+
+    /* ==========================================================================
+       2. AUDIO SYNTHESIS & SOUND EFFECTS (Web Audio API & Speech Synthesis)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      }
+
+      playSplash() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
+      }
+
+      playCatchSuccess() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.25);
+        });
+      }
+
+      playOops() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(130, now + 0.3);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.3);
+      }
+
+      playVictory() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const melody = [
+          { f: 523.25, d: 0.15 }, { f: 659.25, d: 0.15 }, { f: 783.99, d: 0.15 },
+          { f: 1046.50, d: 0.4 }
+        ];
+        let offset = 0;
+        melody.forEach(item => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = item.f;
+          gain.gain.setValueAtTime(0.25, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + item.d);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + item.d);
+          offset += item.d;
+        });
+      }
+
+      speakWord(text) {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'th-TH';
+          utterance.rate = 0.85;
+          utterance.pitch = 1.1;
+          window.speechSynthesis.speak(utterance);
+        }
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* ==========================================================================
+       3. FISH CLASS (Interactive 2D Animated Objects)
+       ========================================================================== */
+    class Fish {
+      constructor(canvasWidth, canvasHeight) {
+        this.w = 110;
+        this.h = 70;
+        this.canvasW = canvasWidth;
+        this.canvasH = canvasHeight;
+        this.resetPosition(true);
+
+        this.tailAngle = Math.random() * Math.PI * 2;
+        this.tailSpeed = 0.15 + Math.random() * 0.1;
+        this.color = FISH_COLORS[Math.floor(Math.random() * FISH_COLORS.length)];
+        this.isCaught = false;
+        this.caughtProgress = 0;
+      }
+
+      resetPosition(initial = false) {
+        // High Mae Kor Kar Frequency (80% Mae Kor Kar words to make game super engaging)
+        this.isKokar = Math.random() < 0.8;
+        const wordPool = this.isKokar ? KOKAR_WORDS : DISTRACTOR_WORDS;
+        this.word = wordPool[Math.floor(Math.random() * wordPool.length)];
+
+        // Water vertical boundary
+        const minY = this.canvasH * 0.35;
+        const maxY = this.canvasH - this.h - 40;
+        this.y = minY + Math.random() * (maxY - minY);
+
+        // Movement velocity
+        this.vx = (Math.random() * 1.5 + 1.2) * (Math.random() < 0.5 ? 1 : -1);
+        this.vy = (Math.random() - 0.5) * 0.5;
+
+        if (initial) {
+          this.x = Math.random() * (this.canvasW - this.w);
+        } else {
+          this.x = this.vx > 0 ? -this.w - Math.random() * 100 : this.canvasW + Math.random() * 100;
+        }
+
+        this.color = FISH_COLORS[Math.floor(Math.random() * FISH_COLORS.length)];
+        this.isCaught = false;
+        this.caughtProgress = 0;
+      }
+
+      update() {
+        if (this.isCaught) return;
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Tail Wiggle animation
+        this.tailAngle += this.tailSpeed;
+
+        const minY = this.canvasH * 0.35;
+        const maxY = this.canvasH - this.h - 30;
+
+        if (this.y < minY || this.y > maxY) this.vy *= -1;
+
+        if (this.x < -this.w - 80 && this.vx < 0) {
+          this.x = this.canvasW + 50;
+        } else if (this.x > this.canvasW + 80 && this.vx > 0) {
+          this.x = -this.w - 50;
+        }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
+
+        if (this.vx < 0) {
+          ctx.scale(-1, 1);
+        }
+
+        const width = this.w;
+        const height = this.h;
+
+        // Tail Fin Animation
+        ctx.save();
+        ctx.translate(-width * 0.35, 0);
+        ctx.rotate(Math.sin(this.tailAngle) * 0.3);
+        ctx.fillStyle = this.color.fin;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-25, -20);
+        ctx.quadraticCurveTo(-35, 0, -25, 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Fish Main Body
+        ctx.fillStyle = this.color.body;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, width * 0.42, height * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body Highlights
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(0, -height * 0.15, width * 0.3, height * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cute Eye
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(width * 0.22, -height * 0.1, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(width * 0.24, -height * 0.1, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(width * 0.26, -height * 0.14, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Side Fin
+        ctx.fillStyle = this.color.fin;
+        ctx.beginPath();
+        ctx.ellipse(-width * 0.05, height * 0.08, 12, 7, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Word Pill Badge
+        this.drawWordBadge(ctx);
+      }
+
+      drawWordBadge(ctx) {
+        ctx.save();
+        ctx.font = 'bold 24px "Mali", sans-serif';
+        const textMetrics = ctx.measureText(this.word);
+        const paddingX = 16;
+        const paddingY = 8;
+        const badgeW = textMetrics.width + paddingX * 2;
+        const badgeH = 34;
+
+        const badgeX = this.x + (this.w - badgeW) / 2;
+        const badgeY = this.y + (this.h - badgeH) / 2;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 17);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 4;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.word, this.x + this.w / 2, this.y + this.h / 2 + 1);
+
+        ctx.restore();
+      }
+
+      isHit(px, py) {
+        const padding = 20;
+        return (
+          px >= this.x - padding &&
+          px <= this.x + this.w + padding &&
+          py >= this.y - padding &&
+          py <= this.y + this.h + padding
+        );
+      }
+    }
+
+    /* ==========================================================================
+       4. MAIN GAME ENGINE
+       ========================================================================== */
+    class EducationalGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.handCanvas = document.getElementById('handCanvas');
+        this.handCtx = this.handCanvas.getContext('2d');
+        this.video = document.getElementById('webcam');
+
+        this.fishes = [];
+        this.score = 0;
+        this.caughtCount = 0;
+        this.playerName = 'น้องคนเก่ง';
+
+        // Timer State
+        this.timeLeft = GAME_DURATION_SECONDS;
+        this.timerInterval = null;
+        this.isGameOver = false;
+
+        // Cursor & Tracking State
+        this.cursor = { x: -100, y: -100, state: 'normal', active: false };
+        this.isCameraActive = false;
+
+        // Rod / Hook Animation State
+        this.hook = {
+          active: false,
+          targetFish: null,
+          startX: 0,
+          startY: 0,
+          currX: 0,
+          currY: 0,
+          progress: 0,
+          phase: 'extending'
+        };
+
+        this.boat = { x: 0, y: 0, w: 220, h: 90 };
+        this.bubbles = [];
+
+        this.initResize();
+        this.initEvents();
+        this.initBubbles();
+      }
+
+      initResize() {
+        const resize = () => {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+          this.handCanvas.width = window.innerWidth;
+          this.handCanvas.height = window.innerHeight;
+
+          this.boat.x = this.canvas.width / 2 - this.boat.w / 2;
+          this.boat.y = this.canvas.height * 0.15;
+        };
+        window.addEventListener('resize', resize);
+        resize();
+      }
+
+      initBubbles() {
+        this.bubbles = [];
+        for (let i = 0; i < 25; i++) {
+          this.bubbles.push({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            r: 3 + Math.random() * 8,
+            speed: 0.5 + Math.random() * 1.2
+          });
+        }
+      }
+
+      initFishes() {
+        this.fishes = [];
+        for (let i = 0; i < TOTAL_FISH_ON_SCREEN; i++) {
+          this.fishes.push(new Fish(this.canvas.width, this.canvas.height));
+        }
+      }
+
+      start() {
+        const nameInput = document.getElementById('player-name-input').value.trim();
+        this.playerName = nameInput || 'น้องคนเก่ง';
+        document.getElementById('player-display-name').innerText = this.playerName;
+
+        this.score = 0;
+        this.caughtCount = 0;
+        this.timeLeft = GAME_DURATION_SECONDS;
+        this.isGameOver = false;
+
+        this.updateUI();
+        this.initFishes();
+        this.startTimer();
+
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('victory-screen').classList.add('hidden');
+        sound.init();
+      }
+
+      startTimer() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => {
+          this.timeLeft--;
+          document.getElementById('timer-counter').innerText = this.timeLeft;
+
+          if (this.timeLeft <= 0) {
+            this.endGame();
+          }
+        }, 1000);
+      }
+
+      endGame() {
+        this.isGameOver = true;
+        clearInterval(this.timerInterval);
+
+        document.getElementById('result-player-name').innerText = this.playerName;
+        document.getElementById('final-score').innerText = this.score;
+        document.getElementById('final-fish-count').innerText = `${this.caughtCount} ตัว`;
+        document.getElementById('victory-screen').classList.remove('hidden');
+
+        sound.playVictory();
+      }
+
+      updateUI() {
+        document.getElementById('score-counter').innerText = this.score;
+        document.getElementById('timer-counter').innerText = this.timeLeft;
+      }
+
+      showToast(text, icon = '🎉', isSuccess = true) {
+        const toast = document.getElementById('toast-message');
+        const toastBg = document.getElementById('toast-bg');
+        const toastIcon = document.getElementById('toast-icon');
+        const toastText = document.getElementById('toast-text');
+
+        toastIcon.innerText = icon;
+        toastText.innerText = text;
+
+        if (isSuccess) {
+          toastBg.className = 'bg-gradient-to-r from-emerald-400 to-green-500 text-white font-extrabold text-xl md:text-2xl px-6 py-3 rounded-full shadow-2xl border-4 border-white flex items-center space-x-3';
+        } else {
+          toastBg.className = 'bg-gradient-to-r from-amber-400 to-orange-500 text-white font-extrabold text-xl md:text-2xl px-6 py-3 rounded-full shadow-2xl border-4 border-white flex items-center space-x-3';
+        }
+
+        toast.classList.remove('opacity-0', 'scale-75');
+        toast.classList.add('opacity-100', 'scale-100');
+
+        setTimeout(() => {
+          toast.classList.remove('opacity-100', 'scale-100');
+          toast.classList.add('opacity-0', 'scale-75');
+        }, 1800);
+      }
+
+      initEvents() {
+        const handleInteraction = (x, y) => {
+          if (this.isGameOver) return;
+          this.cursor.x = x;
+          this.cursor.y = y;
+          this.cursor.active = true;
+          this.checkInteractions();
+        };
+
+        window.addEventListener('mousemove', (e) => {
+          if (!this.isCameraActive) {
+            handleInteraction(e.clientX, e.clientY);
+          }
+        });
+
+        window.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 0) {
+            handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: true });
+
+        document.getElementById('start-btn').addEventListener('click', () => this.start());
+        document.getElementById('restart-btn').addEventListener('click', () => this.start());
+        document.getElementById('capture-btn').addEventListener('click', () => this.captureScoreCard());
+      }
+
+      checkInteractions() {
+        if (this.hook.active || this.isGameOver) return;
+
+        let hovering = false;
+
+        for (let fish of this.fishes) {
+          if (!fish.isCaught && fish.isHit(this.cursor.x, this.cursor.y)) {
+            hovering = true;
+            this.cursor.state = 'hover';
+            this.triggerCatch(fish);
+            break;
+          }
+        }
+
+        if (!hovering) {
+          this.cursor.state = 'normal';
+        }
+      }
+
+      triggerCatch(fish) {
+        fish.isCaught = true;
+        this.cursor.state = 'locked';
+
+        this.hook.active = true;
+        this.hook.targetFish = fish;
+        this.hook.startX = this.boat.x + this.boat.w / 2;
+        this.hook.startY = this.boat.y + 40;
+        this.hook.currX = this.hook.startX;
+        this.hook.currY = this.hook.startY;
+        this.hook.progress = 0;
+        this.hook.phase = 'extending';
+
+        sound.playSplash();
+      }
+
+      update() {
+        for (let b of this.bubbles) {
+          b.y -= b.speed;
+          if (b.y < -10) {
+            b.y = this.canvas.height + 10;
+            b.x = Math.random() * this.canvas.width;
+          }
+        }
+
+        for (let fish of this.fishes) {
+          fish.update();
+        }
+
+        if (this.hook.active && this.hook.targetFish) {
+          const targetX = this.hook.targetFish.x + this.hook.targetFish.w / 2;
+          const targetY = this.hook.targetFish.y + this.hook.targetFish.h / 2;
+
+          if (this.hook.phase === 'extending') {
+            this.hook.progress += 0.08;
+            this.hook.currX = this.hook.startX + (targetX - this.hook.startX) * this.hook.progress;
+            this.hook.currY = this.hook.startY + (targetY - this.hook.startY) * this.hook.progress;
+
+            if (this.hook.progress >= 1) {
+              this.hook.progress = 1;
+              this.hook.phase = 'retracting';
+            }
+          } else if (this.hook.phase === 'retracting') {
+            this.hook.progress -= 0.04;
+            this.hook.currX = this.hook.startX + (targetX - this.hook.startX) * this.hook.progress;
+            this.hook.currY = this.hook.startY + (targetY - this.hook.startY) * this.hook.progress;
+
+            this.hook.targetFish.x = this.hook.currX - this.hook.targetFish.w / 2;
+            this.hook.targetFish.y = this.hook.currY - this.hook.targetFish.h / 2;
+
+            if (this.hook.progress <= 0) {
+              this.hook.active = false;
+              this.evaluateCatch(this.hook.targetFish);
+            }
+          }
+        }
+      }
+
+      evaluateCatch(fish) {
+        if (fish.isKokar) {
+          this.score += 10;
+          this.caughtCount += 1;
+          this.cursor.state = 'success';
+
+          sound.playCatchSuccess();
+          sound.speakWord(fish.word);
+          this.showToast(`ถูกต้อง! "${fish.word}"`, '🎉', true);
+
+          fish.resetPosition();
+        } else {
+          sound.playOops();
+          this.showToast(`ลองใหม่อีกครั้งนะ ("${fish.word}" มีตัวสะกด)`, '💡', false);
+          fish.resetPosition();
+        }
+        this.updateUI();
+      }
+
+      render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.drawEnvironment();
+        this.drawBoat();
+
+        for (let fish of this.fishes) {
+          fish.draw(this.ctx);
+        }
+
+        if (this.hook.active) {
+          this.drawFishingLine();
+        }
+
+        if (this.cursor.active) {
+          this.drawCursor();
+        }
+      }
+
+      drawEnvironment() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Sky
+        const skyGradient = this.ctx.createLinearGradient(0, 0, 0, h * 0.25);
+        skyGradient.addColorStop(0, '#38BDF8');
+        skyGradient.addColorStop(1, '#BAE6FD');
+        this.ctx.fillStyle = skyGradient;
+        this.ctx.fillRect(0, 0, w, h * 0.25);
+
+        // Sun
+        this.ctx.fillStyle = '#FDE047';
+        this.ctx.beginPath();
+        this.ctx.arc(80, 80, 45, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Clouds
+        this.drawCloud(w * 0.2, 70, 0.9);
+        this.drawCloud(w * 0.75, 90, 1.1);
+
+        // Ocean
+        const oceanGradient = this.ctx.createLinearGradient(0, h * 0.25, 0, h);
+        oceanGradient.addColorStop(0, '#0284C7');
+        oceanGradient.addColorStop(0.4, '#0369A1');
+        oceanGradient.addColorStop(1, '#0C4A6E');
+        this.ctx.fillStyle = oceanGradient;
+        this.ctx.fillRect(0, h * 0.25, w, h * 0.75);
+
+        // Waves
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        this.ctx.beginPath();
+        const waveTime = Date.now() * 0.003;
+        this.ctx.moveTo(0, h * 0.25);
+        for (let x = 0; x <= w; x += 30) {
+          const y = h * 0.25 + Math.sin(x * 0.01 + waveTime) * 8;
+          this.ctx.lineTo(x, y);
+        }
+        this.ctx.lineTo(w, h);
+        this.ctx.lineTo(0, h);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Bubbles
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        for (let b of this.bubbles) {
+          this.ctx.beginPath();
+          this.ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+
+        this.drawSeabedDecoration();
+      }
+
+      drawCloud(cx, cy, scale) {
+        this.ctx.save();
+        this.ctx.translate(cx, cy);
+        this.ctx.scale(scale, scale);
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 25, 0, Math.PI * 2);
+        this.ctx.arc(25, -10, 30, 0, Math.PI * 2);
+        this.ctx.arc(55, 0, 25, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+      }
+
+      drawSeabedDecoration() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        this.ctx.fillStyle = '#10B981';
+        for (let x = 40; x < w; x += 180) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(x, h);
+          this.ctx.quadraticCurveTo(x + Math.sin(Date.now() * 0.002 + x) * 20, h - 60, x, h - 110);
+          this.ctx.quadraticCurveTo(x - 15, h - 60, x + 15, h);
+          this.ctx.fill();
+        }
+      }
+
+      drawBoat() {
+        const bx = this.boat.x;
+        const by = this.boat.y;
+        const bw = this.boat.w;
+        const bh = this.boat.h;
+
+        this.ctx.save();
+        const floatOffset = Math.sin(Date.now() * 0.002) * 4;
+        this.ctx.translate(0, floatOffset);
+
+        this.ctx.fillStyle = '#B45309';
+        this.ctx.beginPath();
+        this.ctx.moveTo(bx, by);
+        this.ctx.lineTo(bx + bw, by);
+        this.ctx.quadraticCurveTo(bx + bw - 20, by + bh, bx + bw / 2, by + bh);
+        this.ctx.quadraticCurveTo(bx + 20, by + bh, bx, by);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#78350F';
+        this.ctx.fillRect(bx - 5, by - 5, bw + 10, 12);
+
+        this.ctx.fillStyle = '#D97706';
+        this.ctx.fillRect(bx + bw / 2 - 6, by - 65, 12, 60);
+
+        this.ctx.fillStyle = '#FEF3C7';
+        this.ctx.strokeStyle = '#92400E';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.roundRect(bx + bw / 2 - 65, by - 75, 130, 42, 10);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = '#92400E';
+        this.ctx.font = 'bold 22px "Mali", sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('แม่ ก กา', bx + bw / 2, by - 54);
+
+        this.ctx.restore();
+      }
+
+      drawFishingLine() {
+        this.ctx.save();
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([4, 4]);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.hook.startX, this.hook.startY);
+        this.ctx.lineTo(this.hook.currX, this.hook.currY);
+        this.ctx.stroke();
+
+        this.ctx.setLineDash([]);
+        this.ctx.strokeStyle = '#E2E8F0';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.arc(this.hook.currX, this.hook.currY + 8, 8, 0, Math.PI);
+        this.ctx.stroke();
+
+        this.ctx.restore();
+      }
+
+      drawCursor() {
+        const { x, y, state } = this.cursor;
+        this.ctx.save();
+        this.ctx.translate(x, y);
+
+        if (state === 'normal') {
+          this.ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+          this.ctx.strokeStyle = '#0284C7';
+          this.ctx.lineWidth = 3;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 22, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.stroke();
+
+          this.ctx.fillStyle = '#0284C7';
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
+          this.ctx.fill();
+        } else if (state === 'hover') {
+          const pulse = Math.sin(Date.now() * 0.01) * 4;
+          this.ctx.fillStyle = 'rgba(250, 204, 21, 0.5)';
+          this.ctx.strokeStyle = '#EAB308';
+          this.ctx.lineWidth = 4;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 28 + pulse, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.stroke();
+        } else if (state === 'locked' || state === 'success') {
+          this.ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
+          this.ctx.strokeStyle = '#16A34A';
+          this.ctx.lineWidth = 4;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 32, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.stroke();
+
+          this.ctx.fillStyle = '#FFFFFF';
+          this.ctx.font = '20px sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText('⭐', 0, 0);
+        }
+
+        this.ctx.restore();
+      }
+
+      // Capture Certificate Result as Image Download
+      captureScoreCard() {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 600;
+        tempCanvas.height = 450;
+        const c = tempCanvas.getContext('2d');
+
+        // Certificate Background
+        const grad = c.createLinearGradient(0, 0, 600, 450);
+        grad.addColorStop(0, '#E0F2FE');
+        grad.addColorStop(1, '#FEF3C7');
+        c.fillStyle = grad;
+        c.fillRect(0, 0, 600, 450);
+
+        // Border Frame
+        c.strokeStyle = '#0284C7';
+        c.lineWidth = 12;
+        c.strokeRect(10, 10, 580, 430);
+
+        c.strokeStyle = '#F59E0B';
+        c.lineWidth = 4;
+        c.strokeRect(20, 20, 560, 410);
+
+        // Header Title
+        c.fillStyle = '#0369A1';
+        c.font = 'bold 32px "Mali", sans-serif';
+        c.textAlign = 'center';
+        c.fillText('🏆 ประกาศนียบัตรคนเก่ง 🏆', 300, 75);
+
+        c.fillStyle = '#B45309';
+        c.font = 'bold 24px "Mali", sans-serif';
+        c.fillText('เกมตกปลาคำแม่ ก กา', 300, 120);
+
+        // Player Name
+        c.fillStyle = '#0C4A6E';
+        c.font = 'bold 22px "Mali", sans-serif';
+        c.fillText('มอบให้แก่:', 300, 180);
+
+        c.fillStyle = '#0284C7';
+        c.font = 'extrabold 38px "Mali", sans-serif';
+        c.fillText(this.playerName, 300, 230);
+
+        // Scores Box
+        c.fillStyle = '#FFFFFF';
+        c.strokeStyle = '#F59E0B';
+        c.lineWidth = 3;
+        c.beginPath();
+        c.roundRect(100, 270, 400, 110, 16);
+        c.fill();
+        c.stroke();
+
+        c.fillStyle = '#D97706';
+        c.font = 'bold 24px "Mali", sans-serif';
+        c.fillText(`คะแนนรวม: ${this.score} คะแนน ⭐`, 300, 315);
+
+        c.fillStyle = '#059669';
+        c.font = 'bold 24px "Mali", sans-serif';
+        c.fillText(`ตกปลาสำเร็จ: ${this.caughtCount} ตัว 🐟`, 300, 355);
+
+        // Trigger Download
+        const link = document.createElement('a');
+        link.download = `คะแนน_ตกปลาแม่กกกา_${this.playerName}.png`;
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+      }
+    }
+
+    const game = new EducationalGame();
+
+    function gameLoop() {
+      game.update();
+      game.render();
+      requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+
+    /* ==========================================================================
+       5. MEDIAPIPE HAND TRACKING INTEGRATION & CAMERA HANDLING
+       ========================================================================== */
+    const modeIndicator = document.getElementById('mode-indicator');
+    const handCanvas = document.getElementById('handCanvas');
+    const handCtx = handCanvas.getContext('2d');
+    const webcamVideo = document.getElementById('webcam');
+
+    function onResults(results) {
+      handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+
+        drawHandSkeleton(handCtx, landmarks, handCanvas.width, handCanvas.height);
+
+        const indexTip = landmarks[8];
+        const screenX = (1 - indexTip.x) * handCanvas.width;
+        const screenY = indexTip.y * handCanvas.height;
+
+        game.cursor.x = screenX;
+        game.cursor.y = screenY;
+        game.cursor.active = true;
+        game.isCameraActive = true;
+
+        modeIndicator.innerText = 'โหมด: 👆 ควบคุมด้วยนิ้วชี้ (MediaPipe AR)';
+        modeIndicator.className = 'text-xs text-green-200 font-bold';
+
+        game.checkInteractions();
+      } else {
+        if (!game.isCameraActive) {
+          modeIndicator.innerText = 'โหมด: 🖱️ เมาส์ / Touch Screen';
+          modeIndicator.className = 'text-xs text-yellow-200 font-bold';
+        }
+      }
+    }
+
+    function drawHandSkeleton(ctx, landmarks, w, h) {
+      const CONNECTIONS = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[0,17],[17,18],[18,19],[19,20]
+      ];
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+
+      for (let conn of CONNECTIONS) {
+        const p1 = landmarks[conn[0]];
+        const p2 = landmarks[conn[1]];
+
+        const x1 = (1 - p1.x) * w;
+        const y1 = p1.y * h;
+        const x2 = (1 - p2.x) * w;
+        const y2 = p2.y * h;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < landmarks.length; i++) {
+        const lm = landmarks[i];
+        const x = (1 - lm.x) * w;
+        const y = lm.y * h;
+
+        ctx.beginPath();
+        if (i === 8) {
+          ctx.fillStyle = '#FDE047';
+          ctx.arc(x, y, 10, 0, Math.PI * 2);
+        } else {
+          ctx.fillStyle = '#38BDF8';
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.65,
+      minTrackingConfidence: 0.65
+    });
+
+    hands.onResults(onResults);
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const camera = new Camera(webcamVideo, {
+        onFrame: async () => {
+          await hands.send({ image: webcamVideo });
+        },
+        width: 1280,
+        height: 720
+      });
+
+      camera.start().catch((err) => {
+        console.warn('Camera permission denied or unavailable. Fallback to Mouse/Touch mode.', err);
+        modeIndicator.innerText = 'โหมด: 🖱️ เมาส์ / Touch Screen (ไม่พบกล้อง)';
+      });
+    } else {
+      modeIndicator.innerText = 'โหมด: 🖱️ เมาส์ / Touch Screen (เบราว์เซอร์ไม่รองรับกล้อง)';
+    }
+  </script>
+</body>
+</html>

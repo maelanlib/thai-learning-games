@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ฟาร์มพยัญชนะไทย AR</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe Hands & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <!-- html2canvas for Certificate Screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Mali', cursive;
+            margin: 0;
+            overflow: hidden;
+            background-color: #86efac;
+            touch-action: none;
+            user-select: none;
+        }
+        
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .pointer-events-auto {
+            pointer-events: auto;
+        }
+
+        /* 2D Cartoon Farm Frame Styling */
+        .farm-frame-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 28px;
+            background: repeating-linear-gradient(90deg, #854d0e 0, #854d0e 20px, #713f12 20px, #713f12 40px);
+            border-bottom: 4px solid #451a03;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 20;
+        }
+
+        .farm-frame-side {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 18px;
+            background: repeating-linear-gradient(0deg, #854d0e 0, #854d0e 20px, #713f12 20px, #713f12 40px);
+            border: 3px solid #451a03;
+            z-index: 20;
+        }
+
+        .farm-frame-left { left: 0; }
+        .farm-frame-right { right: 0; }
+
+        .farm-picket-fence {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            z-index: 12;
+            pointer-events: none;
+            background: 
+                /* Bottom lush grass border */
+                linear-gradient(to top, #16a34a 0px, #22c55e 18px, transparent 18px),
+                /* Horizontal Support Beam Shadow */
+                linear-gradient(to bottom, transparent 20px, rgba(0,0,0,0.3) 20px, rgba(0,0,0,0.3) 24px, transparent 24px),
+                /* Horizontal Support Beam */
+                linear-gradient(to bottom, transparent 24px, #854d0e 24px, #a16207 36px, #713f12 38px, transparent 38px),
+                /* Vertical Wooden Pickets */
+                repeating-linear-gradient(90deg, 
+                    #ca8a04 0px, #ca8a04 20px, 
+                    #a16207 20px, #a16207 24px, 
+                    #713f12 24px, #713f12 27px, 
+                    transparent 27px, transparent 42px);
+            filter: drop-shadow(0 -4px 6px rgba(0,0,0,0.25));
+        }
+
+        .farm-picket-fence::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 0;
+            right: 0;
+            height: 14px;
+            background-image: repeating-linear-gradient(90deg, 
+                transparent 0px, transparent 4px,
+                #ca8a04 4px, #a16207 15px, #713f12 24px,
+                transparent 24px, transparent 42px);
+            clip-path: polygon(
+                0 100%, 0 40%, 14px 0, 24px 40%, 24px 100%
+            );
+            /* Pointed tops for picket fence */
+            mask: repeating-linear-gradient(90deg, #000 0px, #000 27px, transparent 27px, transparent 42px);
+            -webkit-mask: repeating-linear-gradient(90deg, #000 0px, #000 27px, transparent 27px, transparent 42px);
+        }
+
+        /* Certificate Input Style */
+        .name-input {
+            border: none;
+            border-bottom: 3px dashed #166534;
+            background: transparent;
+            text-align: center;
+            font-family: 'Mali', cursive;
+            font-size: 1.6rem;
+            color: #15803d;
+            font-weight: 700;
+            outline: none;
+            width: 80%;
+            margin: 10px auto;
+        }
+        .name-input::placeholder {
+            color: #86efac;
+        }
+
+        /* Animations */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px #fef08a, inset 0 0 10px #fef08a; transform: scale(1); }
+            50% { box-shadow: 0 0 30px #facc15, inset 0 0 15px #facc15; transform: scale(1.03); }
+        }
+        .glow-effect {
+            animation: pulse-glow 1.5s infinite;
+        }
+
+        .wood-border {
+            background: #ca8a04;
+            border: 6px solid #713f12;
+            box-shadow: inset 0 0 12px #854d0e, 0 8px 16px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-green-200">
+
+    <!-- 2D Cartoon Farm Decorative Frame Overlay -->
+    <div class="farm-frame-top"></div>
+    <div class="farm-frame-side farm-frame-left"></div>
+    <div class="farm-frame-side farm-frame-right"></div>
+    <div class="farm-picket-fence"></div>
+
+    <!-- Video Element (Hidden) -->
+    <video id="webcam" class="hidden" autoplay playsinline></video>
+
+    <!-- Main Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Layer -->
+    <div id="uiContainer" class="ui-layer flex flex-col justify-between">
+        
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="absolute inset-0 bg-emerald-100 flex flex-col items-center justify-center pointer-events-auto z-50">
+            <div class="text-7xl mb-4 animate-bounce">🚜</div>
+            <h1 class="text-4xl font-extrabold text-green-800 mb-2 text-center drop-shadow">กำลังเตรียมฟาร์ม...</h1>
+            <p class="text-green-700 font-bold mb-4">โปรดอนุญาตให้ใช้งานกล้องเพื่อเล่นเกม</p>
+            <div class="w-14 h-14 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="absolute inset-0 bg-green-900/40 flex flex-col items-center justify-center pointer-events-auto z-40 hidden backdrop-blur-sm">
+            <div class="wood-border p-6 rounded-3xl max-w-lg w-[90%] text-center relative overflow-hidden">
+                <div class="absolute -top-3 -left-3 text-4xl">🌻</div>
+                <div class="absolute -top-3 -right-3 text-4xl">🐓</div>
+                
+                <h1 class="text-4xl md:text-5xl font-extrabold text-yellow-100 mb-4 drop-shadow-lg stroke-amber-900">
+                    🌾 ฟาร์มพยัญชนะไทย AR 🧺
+                </h1>
+                
+                <div class="bg-amber-50 p-5 rounded-2xl shadow-inner mb-6 border-4 border-amber-600 text-left">
+                    <h2 class="text-2xl font-bold text-center text-orange-600 mb-3">วิธีเล่นสนุกๆ</h2>
+                    <ul class="text-lg text-amber-950 space-y-2 font-semibold">
+                        <li class="flex items-center gap-2">👁️ <strong>มองภารกิจ:</strong> สังเกตป้ายพยัญชนะด้านบน</li>
+                        <li class="flex items-center gap-2">👌 <strong>จีบนิ้วจับ:</strong> ใช้นิ้วชี้+นิ้วโป้งจีบจับ (หรือเมาส์/สัมผัสลาก)</li>
+                        <li class="flex items-center gap-2">🧺 <strong>ใส่ตะกร้าสาน:</strong> หยิบป้ายตัวอักษรที่ถูกต้องลงตะกร้า</li>
+                        <li class="flex items-center gap-2">🚫 <strong>ตั้งสติ:</strong> อย่าเก็บตัวอักษรผิดนะจ๊ะ!</li>
+                    </ul>
+                </div>
+
+                <button id="startBtn" class="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-3xl font-extrabold py-3 px-10 rounded-full shadow-2xl border-4 border-white glow-effect transform transition hover:scale-105 active:scale-95">
+                    เริ่มสนุกเลย! 🐥
+                </button>
+            </div>
+        </div>
+
+        <!-- Game HUD -->
+        <div id="gameHUD" class="w-full p-6 pt-8 flex justify-between items-start hidden z-30">
+            <!-- Timer -->
+            <div class="bg-amber-100/95 border-4 border-amber-600 rounded-2xl p-2 px-4 shadow-xl text-center min-w-[100px]">
+                <div class="text-xs text-amber-800 font-extrabold">⏳ เวลา</div>
+                <div id="timeDisplay" class="text-3xl font-extrabold text-amber-600">60</div>
+            </div>
+
+            <!-- Mission Board -->
+            <div class="bg-amber-100/95 border-4 border-amber-700 rounded-3xl p-2 px-8 shadow-2xl text-center transform hover:scale-105 transition">
+                <div class="text-xs text-amber-800 font-extrabold">🎯 ภารกิจตามหา:</div>
+                <div id="missionDisplay" class="text-4xl md:text-5xl font-extrabold text-amber-700 drop-shadow-sm">ก ไก่</div>
+            </div>
+
+            <!-- Score -->
+            <div class="bg-emerald-100/95 border-4 border-emerald-600 rounded-2xl p-2 px-4 shadow-xl text-center min-w-[100px]">
+                <div class="text-xs text-emerald-800 font-extrabold">⭐ คะแนน</div>
+                <div id="scoreDisplay" class="text-3xl font-extrabold text-emerald-600">0</div>
+            </div>
+        </div>
+
+        <!-- Certificate Screen (End Game) -->
+        <div id="certScreen" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center pointer-events-auto z-50 hidden backdrop-blur-sm">
+            <div id="certificateCard" class="bg-[#fffbeb] p-8 rounded-3xl shadow-2xl max-w-lg w-[95%] border-8 border-amber-500 relative overflow-hidden">
+                <div class="absolute top-2 left-2 text-5xl opacity-40">🌽</div>
+                <div class="absolute bottom-2 right-2 text-5xl opacity-40">🌾</div>
+                
+                <div class="text-center relative z-10">
+                    <h2 class="text-4xl font-extrabold text-amber-700 mb-1 drop-shadow-md">ยอดเยี่ยมมาก! 🎉</h2>
+                    <p class="text-lg font-bold text-emerald-800 mb-4">เกียรติบัตรคนเก่งประจำฟาร์ม</p>
+                    
+                    <div class="bg-white rounded-2xl p-4 shadow-inner mb-6 border-2 border-amber-300">
+                        <p class="text-amber-700 text-sm font-bold mb-1">ขอมอบเกียรติบัตรนี้ให้แก่:</p>
+                        <input type="text" id="playerName" placeholder="พิมพ์ชื่อคนเก่งที่นี่..." class="name-input block" autocomplete="off" spellcheck="false">
+                    </div>
+
+                    <div class="flex justify-center items-center gap-3 mb-6">
+                        <div class="text-xl font-bold text-gray-700">คะแนนที่ได้:</div>
+                        <div id="finalScore" class="text-5xl font-extrabold text-emerald-600 drop-shadow-md">100</div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div id="certButtons" class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button id="saveBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-full shadow-lg flex items-center justify-center gap-2 border-2 border-white transition active:scale-95">
+                            📸 บันทึกเกียรติบัตร
+                        </button>
+                        <button id="restartBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-full shadow-lg flex items-center justify-center gap-2 border-2 border-white transition active:scale-95">
+                            🔄 เล่นอีกครั้ง
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. Data & Assets Configuration ---
+        const consonantsData = [
+            { char: 'ก', name: 'ก ไก่', emoji: '🐔' },
+            { char: 'ข', name: 'ข ไข่', emoji: '🥚' },
+            { char: 'ค', name: 'ค ควาย', emoji: '🐃' },
+            { char: 'ง', name: 'ง งู', emoji: '🐍' },
+            { char: 'จ', name: 'จ จาน', emoji: '🍽️' },
+            { char: 'ช', name: 'ช ช้าง', emoji: '🐘' },
+            { char: 'ด', name: 'ด เด็ก', emoji: '👶' },
+            { char: 'ต', name: 'ต เต่า', emoji: '🐢' },
+            { char: 'ป', name: 'ป ปลา', emoji: '🐟' },
+            { char: 'ม', name: 'ม ม้า', emoji: '🐎' },
+            { char: 'ล', name: 'ล ลิง', emoji: '🐒' },
+            { char: 'ส', name: 'ส เสือ', emoji: '🐅' },
+            { char: 'อ', name: 'อ อ่าง', emoji: '🛁' }
+        ];
+
+        // Load Requested Wicker Basket Image
+        const basketImage = new Image();
+        basketImage.crossOrigin = "anonymous";
+        basketImage.src = 'https://static.vecteezy.com/system/resources/thumbnails/009/660/156/small/watercolor-wicker-basket-illustration-png.png';
+
+        // --- 2. Global Variables ---
+        let gameState = 'loading'; // loading, start, playing, end
+        let score = 0;
+        let timeLeft = 60;
+        let currentMission = null;
+        let items = [];
+        let gameTimer = null;
+        let spawnTimer = null;
+        let animationFrameId = null;
+
+        // Hand Tracking Data
+        let activePunches = [];
+
+        // Fallback Mouse/Touch Data
+        let pointerState = { isDown: false, x: 0, y: 0 };
+
+        // DOM Elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const videoElement = document.getElementById('webcam');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- 3. Game Classes ---
+        class Item {
+            constructor() {
+                let isTarget = Math.random() < 0.4 && currentMission != null;
+                this.data = isTarget ? currentMission : consonantsData[Math.floor(Math.random() * consonantsData.length)];
+                
+                this.radius = Math.min(canvas.width, canvas.height) * 0.075;
+                if(this.radius < 42) this.radius = 42;
+                if(this.radius > 68) this.radius = 68;
+
+                // Spawn within visible floating bounds inside canvas
+                const margin = this.radius + 30;
+                this.x = margin + Math.random() * (canvas.width - margin * 2);
+                this.y = margin + 80 + Math.random() * (canvas.height * 0.45);
+                
+                // Floating Velocity X & Y (Bouncing around in 2D space)
+                const speed = 1.2 + Math.random() * 1.6;
+                const angle = Math.random() * Math.PI * 2;
+                this.speedX = Math.cos(angle) * speed;
+                this.speedY = Math.sin(angle) * speed;
+                if (Math.abs(this.speedX) < 0.5) this.speedX = 1.0;
+                if (Math.abs(this.speedY) < 0.5) this.speedY = -1.0;
+                
+                // Rotation & Float Oscillation
+                this.rotation = (Math.random() - 0.5) * 0.3;
+                this.rotSpeed = (Math.random() - 0.5) * 0.015;
+                
+                this.isGrabbed = false;
+                this.grabbedBy = null;
+                this.scale = 1;
+                
+                // 2D Farm Tile Styling Type (Wooden Signboard / Egg Badge)
+                this.badgeType = Math.random() > 0.5 ? 'wood' : 'egg';
+            }
+
+            update() {
+                if (!this.isGrabbed) {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    this.rotation += this.rotSpeed;
+                    this.scale = 1;
+
+                    // Bounce off horizontal screen bounds
+                    const minX = this.radius + 25;
+                    const maxX = canvas.width - this.radius - 25;
+                    if (this.x <= minX) {
+                        this.x = minX;
+                        this.speedX *= -1;
+                    } else if (this.x >= maxX) {
+                        this.x = maxX;
+                        this.speedX *= -1;
+                    }
+
+                    // Bounce off vertical screen bounds (keep inside floating area)
+                    const minY = this.radius + 75;
+                    const maxY = canvas.height - this.radius - 120;
+                    if (this.y <= minY) {
+                        this.y = minY;
+                        this.speedY *= -1;
+                    } else if (this.y >= maxY) {
+                        this.y = maxY;
+                        this.speedY *= -1;
+                    }
+                } else {
+                    this.scale = 1.25;
+                    this.rotation = 0;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.scale, this.scale);
+                ctx.rotate(this.rotation);
+                
+                const r = this.radius;
+
+                if (this.badgeType === 'wood') {
+                    // --- 2D Cartoon Wooden Signboard ---
+                    // Shadow
+                    ctx.beginPath();
+                    ctx.roundRect(-r, -r + 4, r * 2, r * 2, 18);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                    ctx.fill();
+
+                    // Main Wood Body
+                    ctx.beginPath();
+                    ctx.roundRect(-r, -r, r * 2, r * 2, 18);
+                    ctx.fillStyle = '#fef3c7';
+                    ctx.fill();
+                    ctx.lineWidth = 6;
+                    ctx.strokeStyle = '#78350f';
+                    ctx.stroke();
+
+                    // Inner border line
+                    ctx.beginPath();
+                    ctx.roundRect(-r + 6, -r + 6, (r - 6) * 2, (r - 6) * 2, 12);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#d97706';
+                    ctx.stroke();
+                } else {
+                    // --- 2D Cartoon Farm Egg/Badge ---
+                    // Shadow
+                    ctx.beginPath();
+                    ctx.ellipse(0, 5, r, r * 1.15, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                    ctx.fill();
+
+                    // Main Egg Shape
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, r, r * 1.15, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.lineWidth = 6;
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.stroke();
+
+                    // Inner Shine Gradient/Highlight
+                    ctx.beginPath();
+                    ctx.arc(-r * 0.3, -r * 0.4, r * 0.25, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(254, 243, 199, 0.8)';
+                    ctx.fill();
+                }
+
+                // If Grabbed Glow Border
+                if (this.isGrabbed) {
+                    ctx.lineWidth = 5;
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.stroke();
+                }
+
+                // Render Consonant Text
+                ctx.fillStyle = '#78350f';
+                ctx.font = `800 ${r * 0.95}px 'Mali', cursive`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(this.data.char, 0, -r * 0.05);
+
+                // Small Emoji Decor at Bottom Right
+                ctx.shadowBlur = 0;
+                ctx.font = `${r * 0.5}px Arial`;
+                ctx.fillText(this.data.emoji, r * 0.45, r * 0.45);
+
+                ctx.restore();
+            }
+        }
+
+        // --- 4. Core Game Logic ---
+        function setRandomMission() {
+            currentMission = consonantsData[Math.floor(Math.random() * consonantsData.length)];
+            document.getElementById('missionDisplay').innerText = currentMission.name;
+        }
+
+        function spawnItem() {
+            if (gameState === 'playing' && items.length < 7) {
+                items.push(new Item());
+            }
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            timeLeft = 60;
+            items = [];
+            
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('timeDisplay').innerText = timeLeft;
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameHUD').classList.remove('hidden');
+            document.getElementById('certScreen').classList.add('hidden');
+
+            setRandomMission();
+
+            if(gameTimer) clearInterval(gameTimer);
+            if(spawnTimer) clearInterval(spawnTimer);
+
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timeDisplay').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            spawnTimer = setInterval(spawnItem, 1400);
+        }
+
+        function endGame() {
+            gameState = 'end';
+            clearInterval(gameTimer);
+            clearInterval(spawnTimer);
+            
+            document.getElementById('gameHUD').classList.add('hidden');
+            document.getElementById('certScreen').classList.remove('hidden');
+            document.getElementById('finalScore').innerText = score;
+        }
+
+        // --- 5. Rendering & Physics Loop ---
+        function drawBasket() {
+            const basketWidth = Math.min(canvas.width * 0.35, 240);
+            const basketHeight = basketWidth * 0.75;
+            const basketX = (canvas.width - basketWidth) / 2;
+            const basketY = canvas.height - basketHeight - 15;
+
+            // Draw Basket Target Zone Highlight Glow
+            ctx.save();
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 30, basketWidth * 0.6, 25, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(253, 224, 71, 0.35)';
+            ctx.fill();
+            ctx.restore();
+
+            // Draw the requested Wicker Basket Image if loaded
+            if (basketImage.complete && basketImage.naturalWidth !== 0) {
+                ctx.drawImage(basketImage, basketX, basketY, basketWidth, basketHeight);
+            } else {
+                // Fallback Wicker Basket drawing if image fails to load
+                ctx.fillStyle = '#b45309';
+                ctx.beginPath();
+                ctx.roundRect(basketX, basketY + 30, basketWidth, basketHeight - 30, 20);
+                ctx.fill();
+            }
+
+            // Label on Basket
+            ctx.fillStyle = '#78350f';
+            ctx.font = '800 20px Mali';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 6;
+            ctx.fillText('🧺 ลากใส่ตะกร้าสาน 🧺', canvas.width / 2, basketY + basketHeight * 0.65);
+            ctx.shadowBlur = 0;
+
+            return basketY;
+        }
+
+        function calculateDistance(x1, y1, x2, y2) {
+            return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        }
+
+        // --- 6. AI & Input Interaction Logic ---
+        function handleInteractions(basketY) {
+            let inputs = [];
+            
+            // Hand Inputs
+            activePunches.forEach(hand => {
+                inputs.push({
+                    id: hand.id,
+                    x: hand.x,
+                    y: hand.y,
+                    isGrabbing: hand.isPinching,
+                    type: 'hand'
+                });
+            });
+
+            // Pointer / Touch Inputs
+            if (pointerState.isDown) {
+                inputs.push({
+                    id: 'pointer',
+                    x: pointerState.x,
+                    y: pointerState.y,
+                    isGrabbing: pointerState.isDown,
+                    type: 'pointer'
+                });
+            }
+
+            items.forEach((item, index) => {
+                let grabbedThisFrame = false;
+
+                for (let input of inputs) {
+                    const dist = calculateDistance(input.x, input.y, item.x, item.y);
+                    
+                    if (dist < item.radius + 25) {
+                        if (input.isGrabbing) {
+                            if (!item.isGrabbed || item.grabbedBy === input.id) {
+                                item.isGrabbed = true;
+                                item.grabbedBy = input.id;
+                                item.x = input.x;
+                                item.y = input.y;
+                                grabbedThisFrame = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Handle Drop into Basket or Release to continue floating
+                if (item.isGrabbed && !grabbedThisFrame) {
+                    let wasReleaserGrabbing = false;
+                    for (let input of inputs) {
+                        if (input.id === item.grabbedBy && input.isGrabbing) {
+                            wasReleaserGrabbing = true;
+                        }
+                    }
+
+                    if (!wasReleaserGrabbing) {
+                        item.isGrabbed = false;
+                        item.grabbedBy = null;
+
+                        // Reset floating velocities upon release
+                        item.speedX = (Math.random() - 0.5) * 2.5;
+                        item.speedY = (Math.random() - 0.5) * 2.5;
+
+                        if (item.y > basketY) {
+                            if (item.data.char === currentMission.char) {
+                                score += 10;
+                                document.getElementById('scoreDisplay').innerText = score;
+                                items = [];
+                                setRandomMission();
+                                
+                                // Flash success screen feedback
+                                ctx.fillStyle = 'rgba(74, 222, 128, 0.4)';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            } else {
+                                items.splice(index, 1);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 7. Main Game Loop ---
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Mirror Webcam Feed
+            if (videoElement.readyState >= 2) {
+                ctx.save();
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                
+                const vRatio = videoElement.videoWidth / videoElement.videoHeight;
+                const cRatio = canvas.width / canvas.height;
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (vRatio > cRatio) {
+                    drawHeight = canvas.height;
+                    drawWidth = canvas.height * vRatio;
+                    offsetX = (drawWidth - canvas.width) / 2;
+                    offsetY = 0;
+                } else {
+                    drawWidth = canvas.width;
+                    drawHeight = canvas.width / vRatio;
+                    offsetX = 0;
+                    offsetY = (drawHeight - canvas.height) / 2;
+                }
+
+                ctx.drawImage(videoElement, -offsetX, -offsetY, drawWidth, drawHeight);
+                ctx.restore();
+            }
+
+            if (gameState === 'playing') {
+                const basketY = drawBasket();
+                
+                items.forEach(item => {
+                    item.update();
+                    item.draw(ctx);
+                });
+
+                handleInteractions(basketY);
+            }
+
+            // Draw Pinch Hand Cursor Effect
+            activePunches.forEach(hand => {
+                ctx.beginPath();
+                ctx.arc(hand.x, hand.y, hand.isPinching ? 18 : 10, 0, 2 * Math.PI);
+                ctx.fillStyle = hand.isPinching ? 'rgba(250, 204, 21, 0.9)' : 'rgba(255, 255, 255, 0.6)';
+                ctx.fill();
+                if(hand.isPinching){
+                    ctx.strokeStyle = '#d97706';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                }
+            });
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- 8. MediaPipe Setup ---
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults((results) => {
+            activePunches = [];
+
+            if (results.multiHandLandmarks) {
+                for (let index = 0; index < results.multiHandLandmarks.length; index++) {
+                    const landmarks = results.multiHandLandmarks[index];
+                    const handedness = results.multiHandedness[index].label;
+                    
+                    const mirroredLandmarks = landmarks.map(lm => ({
+                        x: 1 - lm.x,
+                        y: lm.y,
+                        z: lm.z
+                    }));
+                    
+                    try {
+                         drawConnectors(ctx, mirroredLandmarks, HAND_CONNECTIONS, {color: '#fef08a', lineWidth: 3});
+                         drawLandmarks(ctx, mirroredLandmarks, {color: '#22c55e', lineWidth: 1, radius: 4});
+                    } catch(e) {}
+
+                    const thumb = mirroredLandmarks[4];
+                    const indexFinger = mirroredLandmarks[8];
+
+                    const thumbX = thumb.x * canvas.width;
+                    const thumbY = thumb.y * canvas.height;
+                    const indexX = indexFinger.x * canvas.width;
+                    const indexY = indexFinger.y * canvas.height;
+
+                    const distance = calculateDistance(thumbX, thumbY, indexX, indexY);
+                    const pinchThreshold = canvas.width * 0.05; 
+                    const isPinching = distance < pinchThreshold;
+
+                    const midX = (thumbX + indexX) / 2;
+                    const midY = (thumbY + indexY) / 2;
+
+                    activePunches.push({
+                        id: handedness + index,
+                        x: midX,
+                        y: midY,
+                        isPinching: isPinching
+                    });
+                }
+            }
+        });
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                try {
+                    await hands.send({image: videoElement});
+                } catch (e) {
+                    console.warn("MediaPipe Frame Error:", e);
+                }
+            },
+            width: 640,
+            height: 480
+        });
+
+        // --- 9. Initialize & Event Listeners ---
+        async function initSetup() {
+            try {
+                await camera.start();
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('startScreen').classList.remove('hidden');
+                gameState = 'start';
+            } catch (error) {
+                console.error("Camera Error: ", error);
+                document.getElementById('loadingScreen').innerHTML = `
+                    <h1 class="text-3xl font-extrabold text-red-600 mb-3">ไม่พบสัญญาณกล้อง</h1>
+                    <p class="mb-4 font-bold text-gray-700">สามารถเล่นด้วยเมาส์หรือระบบสัมผัสแทนได้ครับ</p>
+                    <button onclick="fallbackStart()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-8 py-3 rounded-full text-xl shadow-lg border-2 border-white">เล่นแบบไม่ใช้กล้อง</button>
+                `;
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function fallbackStart() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+            gameState = 'start';
+        }
+
+        // Mouse & Touch Handlers
+        function updatePointer(e, isDown) {
+            e.preventDefault();
+            pointerState.isDown = isDown;
+            if (e.touches && e.touches.length > 0) {
+                pointerState.x = e.touches[0].clientX;
+                pointerState.y = e.touches[0].clientY;
+            } else if (e.clientX !== undefined) {
+                pointerState.x = e.clientX;
+                pointerState.y = e.clientY;
+            } else if (!isDown) {
+                pointerState.isDown = false;
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => updatePointer(e, true));
+        canvas.addEventListener('mousemove', (e) => { if(pointerState.isDown) updatePointer(e, true) });
+        window.addEventListener('mouseup', (e) => updatePointer(e, false));
+
+        canvas.addEventListener('touchstart', (e) => updatePointer(e, true), {passive: false});
+        canvas.addEventListener('touchmove', (e) => { if(pointerState.isDown) updatePointer(e, true) }, {passive: false});
+        window.addEventListener('touchend', (e) => updatePointer(e, false));
+        window.addEventListener('touchcancel', (e) => updatePointer(e, false));
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        
+        // Save Certificate Screenshot
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            const certCard = document.getElementById('certificateCard');
+            const buttons = document.getElementById('certButtons');
+            const input = document.getElementById('playerName');
+            
+            buttons.style.display = 'none';
+            input.style.border = 'none';
+
+            html2canvas(certCard, {
+                backgroundColor: null,
+                scale: 2
+            }).then(canvas => {
+                buttons.style.display = 'flex';
+                input.style.borderBottom = '3px dashed #166534';
+
+                const link = document.createElement('a');
+                link.download = 'เกียรติบัตร_ฟาร์มพยัญชนะไทย.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        window.onload = initSetup;
+    </script>
+</body>
+</html>
