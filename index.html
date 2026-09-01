@@ -1,1 +1,997 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Thai Learning Games</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Kanit', sans-serif;
+            background:
+                radial-gradient(circle at 10% 10%, rgba(129, 140, 248, .16), transparent 30%),
+                radial-gradient(circle at 90% 20%, rgba(45, 212, 191, .14), transparent 30%),
+                radial-gradient(circle at 50% 90%, rgba(251, 191, 36, .12), transparent 35%),
+                #f8fafc;
+            color: #172033;
+        }
+
+        .app-shell {
+            max-width: 1250px;
+            margin: auto;
+            padding: 24px;
+        }
+
+        /* =========================
+           Header
+        ========================= */
+
+        .topbar {
+            position: sticky;
+            top: 14px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 18px;
+            margin-bottom: 28px;
+
+            background: rgba(255,255,255,.78);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            border: 1px solid rgba(255,255,255,.8);
+            border-radius: 22px;
+
+            box-shadow:
+                0 12px 40px rgba(15,23,42,.08),
+                inset 0 1px 0 rgba(255,255,255,.8);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            border-radius: 16px;
+
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color: white;
+            font-size: 25px;
+
+            box-shadow: 0 8px 20px rgba(99,102,241,.25);
+        }
+
+        .brand-title {
+            font-size: 21px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        .home-btn {
+            padding: 9px 16px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 500;
+            transition: .2s;
+        }
+
+        .home-btn:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+
+        /* =========================
+           Hero
+        ========================= */
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+
+            padding: 55px 35px;
+            margin-bottom: 42px;
+
+            border-radius: 34px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(79,70,229,.96),
+                    rgba(124,58,237,.94)
+                );
+
+            color: white;
+
+            box-shadow:
+                0 25px 60px rgba(79,70,229,.22);
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            right: -80px;
+            top: -100px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.10);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            left: -80px;
+            bottom: -100px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.08);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 760px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+
+            padding: 7px 14px;
+            margin-bottom: 18px;
+
+            border-radius: 999px;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.18);
+
+            font-size: 14px;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-family: 'Mali', cursive;
+            font-size: clamp(35px, 6vw, 64px);
+            font-weight: 700;
+            line-height: 1.05;
+        }
+
+        .hero p {
+            margin: 18px 0 0;
+            max-width: 650px;
+            color: rgba(255,255,255,.86);
+            font-size: 18px;
+            line-height: 1.7;
+        }
+
+        /* =========================
+           Category
+        ========================= */
+
+        .category-section {
+            margin-bottom: 48px;
+            scroll-margin-top: 100px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 18px;
+        }
+
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .category-icon {
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 8px 25px rgba(15,23,42,.07);
+            font-size: 23px;
+        }
+
+        .category-title h2 {
+            margin: 0;
+            font-size: 25px;
+            font-weight: 700;
+        }
+
+        .category-title span {
+            display: block;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .game-count {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* =========================
+           Game Cards
+        ========================= */
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .game-card {
+            position: relative;
+            overflow: hidden;
+
+            background: rgba(255,255,255,.88);
+            border: 1px solid rgba(226,232,240,.9);
+            border-radius: 26px;
+
+            box-shadow: 0 10px 35px rgba(15,23,42,.06);
+
+            transition:
+                transform .25s ease,
+                box-shadow .25s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 45px rgba(15,23,42,.12);
+        }
+
+        .game-image {
+            position: relative;
+            height: 230px;
+            overflow: hidden;
+
+            background:
+                linear-gradient(135deg,#e0e7ff,#ccfbf1);
+        }
+
+        .game-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+
+            transition: transform .4s ease;
+        }
+
+        .game-card:hover .game-image img {
+            transform: scale(1.05);
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
+
+            display: grid;
+            place-items: center;
+
+            font-size: 72px;
+            color: rgba(79,70,229,.5);
+        }
+
+        .game-number {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+
+            padding: 5px 11px;
+
+            border-radius: 999px;
+
+            background: rgba(15,23,42,.72);
+            color: white;
+
+            font-size: 12px;
+            font-weight: 600;
+
+            backdrop-filter: blur(8px);
+        }
+
+        .game-body {
+            padding: 20px;
+        }
+
+        .game-body h3 {
+            margin: 0 0 7px;
+            font-size: 21px;
+            font-weight: 600;
+        }
+
+        .game-description {
+            margin: 0 0 18px;
+            min-height: 45px;
+
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .play-btn {
+            width: 100%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+
+            padding: 12px 18px;
+
+            border: none;
+            border-radius: 15px;
+
+            background: linear-gradient(135deg,#4f46e5,#7c3aed);
+            color: white;
+
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+
+            cursor: pointer;
+
+            transition: .2s;
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.06);
+            transform: translateY(-1px);
+        }
+
+        .play-btn:active {
+            transform: scale(.98);
+        }
+
+        /* =========================
+           Footer
+        ========================= */
+
+        footer {
+            margin-top: 60px;
+            padding: 30px 0;
+
+            text-align: center;
+
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        /* =========================
+           Responsive
+        ========================= */
+
+        @media (max-width: 700px) {
+
+            .app-shell {
+                padding: 14px;
+            }
+
+            .topbar {
+                top: 8px;
+                padding: 11px 13px;
+                border-radius: 18px;
+            }
+
+            .brand-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 13px;
+            }
+
+            .brand-title {
+                font-size: 17px;
+            }
+
+            .hero {
+                padding: 38px 24px;
+                border-radius: 26px;
+            }
+
+            .hero p {
+                font-size: 15px;
+            }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .game-image {
+                height: 210px;
+            }
+
+            .category-title h2 {
+                font-size: 21px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- =========================
+         TOP BAR
+    ========================== -->
+
+    <header class="topbar">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                🎓
+            </div>
+
+            <div>
+                <div class="brand-title">
+                    Thai Learning Games
+                </div>
+
+                <div class="brand-subtitle">
+                    เกมการเรียนรู้ภาษาไทย
+                </div>
+            </div>
+
+        </div>
+
+        <a href="#games" class="home-btn">
+            🎮 เกมทั้งหมด
+        </a>
+
+    </header>
+
+
+    <!-- =========================
+         HERO
+    ========================== -->
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <div class="hero-badge">
+                ✨ เรียนรู้ผ่านการเล่น
+            </div>
+
+            <h1>
+                สนุกกับการเรียนรู้<br>
+                ภาษาไทย
+            </h1>
+
+            <p>
+                รวมเกมการเรียนรู้ภาษาไทยแบบโต้ตอบ
+                ออกแบบให้เหมาะกับผู้เล่นแต่ละช่วงวัย
+                เรียนง่าย เล่นสนุก และจดจำได้จริง
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         GAMES
+    ========================== -->
+
+    <main id="games">
+
+
+        <!-- เด็กและเยาวชน -->
+
+        <section class="category-section">
+
+            <div class="category-header">
+
+                <div class="category-title">
+
+                    <div class="category-icon">
+                        🧒
+                    </div>
+
+                    <div>
+                        <h2>เด็กและเยาวชน</h2>
+                        <span>เรียนรู้ภาษาไทยผ่านเกมแสนสนุก</span>
+                    </div>
+
+                </div>
+
+                <div class="game-count">
+                    2 เกม
+                </div>
+
+            </div>
+
+
+            <div class="games-grid">
+
+                <article class="game-card">
+
+                    <div class="game-image">
+
+                        <!-- ใส่รูปทีหลังได้ -->
+                        <div class="image-placeholder">
+                            🐟
+                        </div>
+
+                        <div class="game-number">
+                            GAME 01
+                        </div>
+
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>
+                            เกมที่ 1
+                        </h3>
+
+                        <p class="game-description">
+                            เกมการเรียนรู้ภาษาไทยสำหรับเด็ก
+                            ฝึกทักษะผ่านการเล่นแบบโต้ตอบ
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game1/')">
+
+                            ▶ เล่นเกม
+
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-image">
+
+                        <div class="image-placeholder">
+                            🎣
+                        </div>
+
+                        <div class="game-number">
+                            GAME 02
+                        </div>
+
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>
+                            เกมที่ 2
+                        </h3>
+
+                        <p class="game-description">
+                            เกมสนุกสำหรับฝึกภาษาไทย
+                            เหมาะสำหรับเด็กและเยาวชน
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game2/')">
+
+                            ▶ เล่นเกม
+
+                        </button>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- นักศึกษา กศน. -->
+
+        <section class="category-section">
+
+            <div class="category-header">
+
+                <div class="category-title">
+
+                    <div class="category-icon">
+                        🎓
+                    </div>
+
+                    <div>
+                        <h2>นักศึกษา กศน.</h2>
+                        <span>ฝึกภาษาไทยผ่านสถานการณ์และเกม</span>
+                    </div>
+
+                </div>
+
+                <div class="game-count">
+                    2 เกม
+                </div>
+
+            </div>
+
+
+            <div class="games-grid">
+
+                <article class="game-card">
+
+                    <div class="game-image">
+
+                        <div class="image-placeholder">
+                            📚
+                        </div>
+
+                        <div class="game-number">
+                            GAME 03
+                        </div>
+
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 3</h3>
+
+                        <p class="game-description">
+                            ฝึกทักษะภาษาไทยในรูปแบบเกม
+                            สำหรับนักศึกษา กศน.
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game3/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-image">
+
+                        <div class="image-placeholder">
+                            🦆
+                        </div>
+
+                        <div class="game-number">
+                            GAME 04
+                        </div>
+
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 4</h3>
+
+                        <p class="game-description">
+                            เกมฝึกภาษาไทยแบบสนุกและท้าทาย
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game4/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ประชาชน -->
+
+        <section class="category-section">
+
+            <div class="category-header">
+
+                <div class="category-title">
+
+                    <div class="category-icon">
+                        👨‍👩‍👧
+                    </div>
+
+                    <div>
+                        <h2>ประชาชน</h2>
+                        <span>เรียนรู้ภาษาไทยในชีวิตประจำวัน</span>
+                    </div>
+
+                </div>
+
+                <div class="game-count">
+                    2 เกม
+                </div>
+
+            </div>
+
+
+            <div class="games-grid">
+
+                <article class="game-card">
+
+                    <div class="game-image">
+                        <div class="image-placeholder">🧠</div>
+                        <div class="game-number">GAME 05</div>
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 5</h3>
+
+                        <p class="game-description">
+                            เกมฝึกทักษะภาษาไทยสำหรับประชาชน
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game5/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-image">
+                        <div class="image-placeholder">💬</div>
+                        <div class="game-number">GAME 06</div>
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 6</h3>
+
+                        <p class="game-description">
+                            ฝึกภาษาไทยผ่านเกมและกิจกรรม
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game6/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ผู้สูงอายุ -->
+
+        <section class="category-section">
+
+            <div class="category-header">
+
+                <div class="category-title">
+
+                    <div class="category-icon">
+                        👴
+                    </div>
+
+                    <div>
+                        <h2>ผู้สูงอายุ</h2>
+                        <span>เกมเรียบง่าย เล่นสบาย ฝึกความจำ</span>
+                    </div>
+
+                </div>
+
+                <div class="game-count">
+                    2 เกม
+                </div>
+
+            </div>
+
+
+            <div class="games-grid">
+
+                <article class="game-card">
+
+                    <div class="game-image">
+                        <div class="image-placeholder">🌷</div>
+                        <div class="game-number">GAME 07</div>
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 7</h3>
+
+                        <p class="game-description">
+                            เกมภาษาไทยที่ออกแบบให้เล่นง่าย
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game7/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-image">
+                        <div class="image-placeholder">🧩</div>
+                        <div class="game-number">GAME 08</div>
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 8</h3>
+
+                        <p class="game-description">
+                            ฝึกสมองและทักษะภาษาไทยอย่างเพลิดเพลิน
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game8/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ผู้พิการ -->
+
+        <section class="category-section">
+
+            <div class="category-header">
+
+                <div class="category-title">
+
+                    <div class="category-icon">
+                        ♿
+                    </div>
+
+                    <div>
+                        <h2>ผู้พิการ</h2>
+                        <span>เกมการเรียนรู้ที่เข้าถึงได้ง่าย</span>
+                    </div>
+
+                </div>
+
+                <div class="game-count">
+                    2 เกม
+                </div>
+
+            </div>
+
+
+            <div class="games-grid">
+
+                <article class="game-card">
+
+                    <div class="game-image">
+                        <div class="image-placeholder">⭐</div>
+                        <div class="game-number">GAME 09</div>
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 9</h3>
+
+                        <p class="game-description">
+                            เกมภาษาไทยที่ออกแบบโดยคำนึงถึงการเข้าถึง
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game9/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-image">
+                        <div class="image-placeholder">🌈</div>
+                        <div class="game-number">GAME 10</div>
+                    </div>
+
+                    <div class="game-body">
+
+                        <h3>เกมที่ 10</h3>
+
+                        <p class="game-description">
+                            สนุกกับการเรียนรู้ภาษาไทยในรูปแบบใหม่
+                        </p>
+
+                        <button class="play-btn"
+                                onclick="openGame('games/game10/')">
+                            ▶ เล่นเกม
+                        </button>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+        Thai Learning Games © 2026
+        <br>
+        เรียนรู้ภาษาไทยผ่านการเล่น
+    </footer>
+
+</div>
+
+
+<script>
+
+    function openGame(path) {
+
+        // เปิดเกมในหน้าปัจจุบัน
+        window.location.href = path;
+
+    }
+
+</script>
+
+</body>
+</html>
+
 
