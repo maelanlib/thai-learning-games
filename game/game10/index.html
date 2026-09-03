@@ -1,1 +1,994 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกม รับของกินใส่ตะกร้า </title>
+    
+    <!-- Load MediaPipe for AR Face Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700&display=swap');
+
+        :root {
+            --bubble-bg: rgba(255, 255, 255, 0.5);
+            --bubble-border: rgba(255, 255, 255, 0.8);
+            --bubble-shadow: 0 10px 30px rgba(31, 38, 135, 0.2), inset 0 0 20px rgba(255, 255, 255, 0.9);
+            --rainbow-grad: linear-gradient(135deg, rgba(161,196,253,0.5) 0%, rgba(194,233,251,0.5) 50%, rgba(255,195,160,0.5) 100%);
+            --text-color: #2c3e50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Mali', cursive;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #a1c4fd 0%, #c2e9fb 50%, #fbc2eb 100%);
+            color: var(--text-color);
+            position: relative;
+            touch-action: none;
+        }
+
+        /* Background Bubbles Animation */
+        .bg-bubbles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .bg-bubble {
+            position: absolute;
+            bottom: -60px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.9), 0 5px 15px rgba(0,0,0,0.05);
+            animation: floatUp linear infinite;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.6); opacity: 0; }
+            20% { opacity: 0.8; }
+            100% { transform: translateY(-110vh) scale(1.4); opacity: 0; }
+        }
+
+        /* Screen Manager */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Glassmorphism Bubble Panel */
+        .glass-panel {
+            background: var(--rainbow-grad);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 3px solid var(--bubble-border);
+            border-radius: 45px;
+            box-shadow: var(--bubble-shadow);
+            padding: 35px 30px;
+            text-align: center;
+            max-width: 90%;
+            width: 520px;
+        }
+
+        h1 { font-size: 2.4rem; margin-bottom: 12px; color: #fff; text-shadow: 0 3px 8px rgba(0,0,0,0.25); }
+        h2 { font-size: 1.9rem; margin-bottom: 15px; color: #2c3e50; text-shadow: 0 2px 4px rgba(255,255,255,0.6); }
+        p { font-size: 1.25rem; margin-bottom: 20px; line-height: 1.5; font-weight: 600; }
+
+        /* Bubble Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 16px 32px;
+            margin: 10px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+            background: rgba(255, 255, 255, 0.75);
+            border: 3px solid #fff;
+            border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12), inset 0 -4px 6px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+            width: 100%;
+            max-width: 380px;
+        }
+        .btn:hover, .btn:active {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.2), inset 0 -4px 6px rgba(0,0,0,0.05);
+        }
+        .btn.ar-btn { background: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%); }
+        .btn.touch-btn { background: linear-gradient(120deg, #ffd194 0%, #70e1f5 100%); }
+        .btn.mouse-btn { background: linear-gradient(120deg, #ff9a9e 0%, #fecfef 100%); }
+        .btn.start-btn { background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%); font-size: 1.8rem; padding: 18px 40px; }
+
+        /* HUD Header */
+        #game-hud {
+            position: absolute;
+            top: 20px; width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 25px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .hud-bubble {
+            background: var(--bubble-bg);
+            border: 2px solid var(--bubble-border);
+            backdrop-filter: blur(8px);
+            border-radius: 35px;
+            padding: 10px 22px;
+            font-size: 1.6rem;
+            font-weight: 700;
+            box-shadow: var(--bubble-shadow);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #sound-toggle {
+            cursor: pointer;
+            font-size: 1.6rem;
+            width: 55px; height: 55px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+        }
+
+        /* Custom SVG Basket Game Object */
+        #basket-container {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 160px;
+            z-index: 30;
+            pointer-events: none;
+            transition: left 0.08s ease-out;
+            filter: drop-shadow(0 15px 15px rgba(0,0,0,0.25));
+        }
+        .basket-bounce {
+            animation: basketBounceAnim 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes basketBounceAnim {
+            0% { transform: translateX(-50%) scale(1); }
+            40% { transform: translateX(-50%) scale(1.25) translateY(-12px); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+
+        /* Food Bubble Cards falling down */
+        .food-bubble {
+            position: absolute;
+            width: 105px;
+            height: 135px;
+            background: var(--rainbow-grad);
+            border: 3px solid var(--bubble-border);
+            border-radius: 50px;
+            box-shadow: var(--bubble-shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 25;
+            cursor: pointer;
+            animation: bubbleWobble 3.5s ease-in-out infinite;
+        }
+        .food-bubble .emoji {
+            font-size: 3.5rem;
+            filter: drop-shadow(0 5px 6px rgba(0,0,0,0.2));
+            pointer-events: none;
+        }
+        .food-bubble .name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 3px 12px;
+            border-radius: 18px;
+            margin-top: 6px;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+        @keyframes bubbleWobble {
+            0% { transform: translateX(0) rotate(-4deg); }
+            50% { transform: translateX(8px) rotate(4deg); }
+            100% { transform: translateX(0) rotate(-4deg); }
+        }
+
+        /* AR Camera View & Mouth Indicator */
+        #ar-preview-container {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #fff;
+            box-shadow: var(--bubble-shadow);
+            z-index: 40;
+            display: none;
+        }
+        #ar-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        #mouth-indicator {
+            position: absolute;
+            font-size: 3rem;
+            pointer-events: none;
+            z-index: 35;
+            display: none;
+            filter: drop-shadow(0 0 12px rgba(255,255,255,0.9));
+            transition: left 0.08s, top 0.08s;
+            text-align: center;
+        }
+
+        /* Sparkle Effects */
+        .sparkle {
+            position: absolute;
+            font-size: 1.8rem;
+            pointer-events: none;
+            animation: sparkleAnim 0.7s forwards;
+            z-index: 50;
+        }
+        @keyframes sparkleAnim {
+            0% { opacity: 1; transform: scale(0.4) translateY(0) rotate(0deg); }
+            100% { opacity: 0; transform: scale(1.6) translateY(-60px) rotate(45deg); }
+        }
+
+        /* Combo Notification */
+        #combo-text {
+            position: absolute;
+            top: 95px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.6rem;
+            color: #ff5e62;
+            text-shadow: 0 0 12px #fff, 0 0 25px #fff;
+            font-weight: 800;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        /* Summary Screen Items Container */
+        #summary-basket {
+            background: rgba(255, 255, 255, 0.55);
+            border: 2px solid rgba(255,255,255,0.8);
+            border-radius: 25px;
+            padding: 18px;
+            margin: 20px 0;
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+        }
+        .summary-item {
+            background: #fff;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* AR Loading Overlay */
+        #ar-loading {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            display: none;
+            font-size: 1.7rem;
+            font-weight: 700;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            animation: spin 1.8s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.6rem; }
+            .btn { font-size: 1.3rem; padding: 14px 24px; max-width: 100%; }
+            .food-bubble { width: 85px; height: 110px; }
+            .food-bubble .emoji { font-size: 2.8rem; }
+            .food-bubble .name { font-size: 1rem; padding: 2px 8px; }
+            #ar-preview-container { width: 110px; height: 110px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Bubble Particles -->
+    <div class="bg-bubbles" id="bg-bubbles"></div>
+
+    <!-- Screen 1: Welcome Home -->
+    <div id="screen-home" class="screen">
+        <div class="glass-panel">
+            <h1>🧺 รับของกินใส่ตะกร้า 🧺</h1>
+            <p>ส่งเสริมการอ่านเพื่อการเรียนรู้<br>ห้องสมุดประชาชนอำเภอแม่ลาน</p>
+            <div style="font-size: 4.5rem; margin: 15px 0;">🍎🍌🍕🥛</div>
+            <button class="btn start-btn" onclick="showScreen('screen-mode-select'); initAudioContext();">
+                🎮เริ่มต้นใช้งาน🎮
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 2: Mode Selection (Strictly 3 Modes) -->
+    <div id="screen-mode-select" class="screen hidden">
+        <div class="glass-panel">
+            <h2>🎮 เลือกวิธีเล่นที่ถนัด 🎮</h2>
+            <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-top: 15px;">
+                <button class="btn ar-btn" onclick="startGame('ar')">📷 อ้าปากรับ (AR Mode)</button>
+                <button class="btn touch-btn" onclick="startGame('touch')">👆 แตะเพื่อรับ (Touch Mode)</button>
+                <button class="btn mouse-btn" onclick="startGame('mouse')">🖱️ เมาส์เลื่อนตะกร้า (Mouse)</button>
+            </div>
+            <br>
+            <button class="btn" style="background: rgba(255,255,255,0.8); max-width: 220px;" onclick="showScreen('screen-home')">🏠 กลับหน้าหลัก</button>
+        </div>
+    </div>
+
+    <!-- Screen 3: Gameplay Screen -->
+    <div id="screen-game" class="screen hidden" style="align-items: flex-start;">
+        <div id="game-hud">
+            <div class="hud-bubble">⏱️ <span id="timer-display">03:00</span></div>
+            <div class="hud-bubble" id="sound-toggle" onclick="toggleSound()">🔊</div>
+            <div class="hud-bubble">⭐ <span id="score-display">0</span></div>
+        </div>
+        
+        <div id="combo-text">COMBO x2!</div>
+
+        <!-- Game Area Container -->
+        <div id="game-area" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
+            
+            <!-- Custom SVG Basket Game Object with internal items container -->
+            <div id="basket-container">
+                <svg id="custom-basket-svg" width="220" height="160" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Soft Bubble Glow / Shadow behind basket -->
+                    <ellipse cx="110" cy="145" rx="90" ry="12" fill="rgba(31, 38, 135, 0.25)" filter="blur(6px)"/>
+                    
+                    <!-- Back Rim Handle -->
+                    <path d="M45 45 C45 10 175 10 175 45" stroke="url(#basketGrad)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                    
+                    <!-- Basket Body Back Layer -->
+                    <path d="M30 50 L50 135 C52 142 60 148 68 148 L152 148 C160 148 168 142 170 135 L190 50 Z" fill="url(#basketBodyGrad)" stroke="#fff" stroke-width="3"/>
+                    
+                    <!-- Woven Pattern Lines -->
+                    <path d="M38 55 Q 110 75 182 55" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none"/>
+                    <path d="M44 80 Q 110 100 176 80" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none"/>
+                    <path d="M50 105 Q 110 125 170 105" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none"/>
+                    
+                    <path d="M65 50 L75 148" stroke="rgba(139, 94, 60, 0.3)" stroke-width="3" fill="none"/>
+                    <path d="M95 50 L105 148" stroke="rgba(139, 94, 60, 0.3)" stroke-width="3" fill="none"/>
+                    <path d="M125 50 L115 148" stroke="rgba(139, 94, 60, 0.3)" stroke-width="3" fill="none"/>
+                    <path d="M155 50 L145 148" stroke="rgba(139, 94, 60, 0.3)" stroke-width="3" fill="none"/>
+
+                    <!-- Front Rim & Iridescent Soap Bubble Highlight Overlay -->
+                    <path d="M25 50 C25 35 195 35 195 50 C195 65 25 65 25 50 Z" fill="url(#rimGrad)" stroke="#fff" stroke-width="3"/>
+                    <ellipse cx="110" cy="48" rx="80" ry="8" fill="rgba(255,255,255,0.4)" filter="blur(2px)"/>
+                    
+                    <!-- Gradients Definition -->
+                    <defs>
+                        <linearGradient id="basketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#ffd194" />
+                            <stop offset="50%" stop-color="#f6ad55" />
+                            <stop offset="100%" stop-color="#dd6b20" />
+                        </linearGradient>
+                        <linearGradient id="basketBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#fbd38d" />
+                            <stop offset="100%" stop-color="#d69e2e" />
+                        </linearGradient>
+                        <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#ffecd2" />
+                            <stop offset="50%" stop-color="#fcb69f" />
+                            <stop offset="100%" stop-color="#ff9a9e" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                <!-- Real items stack container inside basket -->
+                <div id="basket-items-stack" style="position: absolute; bottom: 25px; left: 35px; width: 150px; height: 95px; display: flex; flex-wrap: wrap-reverse; align-content: flex-end; justify-content: center; gap: 4px; overflow: hidden; pointer-events: none;"></div>
+            </div>
+            
+            <!-- Virtual Mouth Indicator for AR Mode -->
+            <div id="mouth-indicator">👄<br><span style="font-size: 0.95rem; background:rgba(255,255,255,0.8); border-radius:10px; padding:2px 8px; color:#2c3e50;">อ้าปากที่นี่เพื่อรับ</span></div>
+        </div>
+
+        <!-- AR Video Preview Bubble -->
+        <div id="ar-preview-container">
+            <video id="ar-video" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <!-- Screen 4: Summary Result -->
+    <div id="screen-summary" class="screen hidden">
+        <div class="glass-panel">
+            <h1>🎉 หมดเวลา! เก่งมากครับ!</h1>
+            <h2>⭐ คะแนนรวม: <span id="final-score">0</span></h2>
+            <p>🧺 เก็บของกินสะสมในตะกร้าได้ทั้งหมด <strong id="final-count">0</strong> ชิ้น</p>
+            
+            <div id="summary-basket">
+                <!-- Collected food badges shown here -->
+            </div>
+
+            <p id="praise-text" style="color: #ff5e62; font-weight: bold; margin-bottom: 20px;"></p>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                <button class="btn" style="background: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%);" onclick="showScreen('screen-mode-select')">🔄 เล่นอีกครั้ง</button>
+                <button class="btn" style="background: rgba(255,255,255,0.9); max-width: 250px;" onclick="showScreen('screen-home')">🏠 กลับหน้าหลัก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AR Loading Overlay -->
+    <div id="ar-loading">
+        <div class="loader"></div>
+        <p>กำลังเปิดกล้องและระบบตรวจจับใบหน้า... 🫧</p>
+    </div>
+
+    <!-- ==========================================
+         JAVASCRIPT GAME ENGINE
+         ========================================== -->
+    <script>
+        const FOOD_LIST = [
+            { emoji: '🍌', name: 'กล้วย' }, { emoji: '🍎', name: 'แอปเปิล' },
+            { emoji: '🍊', name: 'ส้ม' }, { emoji: '🍉', name: 'แตงโม' },
+            { emoji: '🍓', name: 'สตรอว์เบอร์รี' }, { emoji: '🍇', name: 'องุ่น' },
+            { emoji: '🥭', name: 'มะม่วง' }, { emoji: '🍍', name: 'สับปะรด' },
+            { emoji: '🥥', name: 'มะพร้าว' }, { emoji: '🍞', name: 'ขนมปัง' },
+            { emoji: '🍩', name: 'โดนัท' }, { emoji: '🍰', name: 'เค้ก' },
+            { emoji: '🍪', name: 'คุกกี้' }, { emoji: '🍦', name: 'ไอศกรีม' },
+            { emoji: '🍕', name: 'พิซซ่า' }, { emoji: '🍔', name: 'แฮมเบอร์เกอร์' },
+            { emoji: '🍟', name: 'เฟรนช์ฟรายส์' }, { emoji: '🍗', name: 'ไก่ทอด' },
+            { emoji: '🍜', name: 'บะหมี่' }, { emoji: '🍚', name: 'ข้าว' },
+            { emoji: '🥚', name: 'ไข่' }, { emoji: '🥛', name: 'นม' }, { emoji: '🧀', name: 'ชีส' }
+        ];
+
+        const PRAISE_PREFIXES = ["เยี่ยมเลย!", "เก่งมาก!", "สุดยอด!", "ว้าว!"];
+        const PRAISE_SUFFIXES = ["ลงตะกร้าแล้วครับ", "เก็บใส่ตะกร้าเรียบร้อย", "ได้สำเร็จครับ"];
+
+        let gameState = {
+            mode: '', // 'ar', 'touch', 'mouse'
+            score: 0,
+            timeLeft: 180, // 3 minutes
+            isGameOver: true,
+            activeFoods: [],
+            collectedFoods: {},
+            totalCollectedCount: 0,
+            combo: 0,
+            comboTimer: null,
+            soundEnabled: true,
+            basketX: window.innerWidth / 2,
+            spawnInterval: null,
+            timerInterval: null,
+            gameLoopReq: null
+        };
+
+        let audioCtx;
+        let ttsVoices = [];
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            loadVoices();
+        }
+
+        function loadVoices() {
+            const synth = window.speechSynthesis;
+            ttsVoices = synth.getVoices();
+            if (ttsVoices.length === 0) {
+                synth.onvoiceschanged = () => { ttsVoices = synth.getVoices(); };
+            }
+        }
+
+        function speakThai(text) {
+            if (!gameState.soundEnabled) return;
+            const synth = window.speechSynthesis;
+            synth.cancel(); // Prevent overlapping speech
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'th-TH';
+            
+            const thaiVoice = ttsVoices.find(voice => voice.lang && voice.lang.includes('th'));
+            if (thaiVoice) utterance.voice = thaiVoice;
+            
+            utterance.rate = 1.1;
+            synth.speak(utterance);
+        }
+
+        function playSoundEffect(type) {
+            if (!gameState.soundEnabled || !audioCtx) return;
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'ping') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            } else if (type === 'pop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.12);
+                gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'combo') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            document.getElementById('sound-toggle').innerText = gameState.soundEnabled ? '🔊' : '🔇';
+            if (gameState.soundEnabled) initAudioContext();
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function startGame(mode) {
+            initAudioContext();
+            gameState.mode = mode;
+            gameState.score = 0;
+            gameState.timeLeft = 180;
+            gameState.isGameOver = false;
+            gameState.activeFoods = [];
+            gameState.collectedFoods = {};
+            gameState.totalCollectedCount = 0;
+            gameState.combo = 0;
+            gameState.basketX = window.innerWidth / 2;
+
+            updateHUD();
+            document.getElementById('basket-items-stack').innerHTML = '';
+            document.getElementById('game-area').innerHTML = `
+                <div id="basket-container" style="left: ${gameState.basketX}px;">
+                    <!-- SVG Basket Re-injected -->
+                    <svg width="220" height="160" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="110" cy="145" rx="90" ry="12" fill="rgba(31, 38, 135, 0.25)" filter="blur(6px)"/>
+                        <path d="M45 45 C45 10 175 10 175 45" stroke="url(#basketGrad)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                        <path d="M30 50 L50 135 C52 142 60 148 68 148 L152 148 C160 148 168 142 170 135 L190 50 Z" fill="url(#basketBodyGrad)" stroke="#fff" stroke-width="3"/>
+                        <path d="M38 55 Q 110 75 182 55" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none"/>
+                        <path d="M44 80 Q 110 100 176 80" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none"/>
+                        <path d="M50 105 Q 110 125 170 105" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none"/>
+                        <path d="M25 50 C25 35 195 35 195 50 C195 65 25 65 25 50 Z" fill="url(#rimGrad)" stroke="#fff" stroke-width="3"/>
+                    </svg>
+                    <div id="basket-items-stack" style="position: absolute; bottom: 25px; left: 35px; width: 150px; height: 95px; display: flex; flex-wrap: wrap-reverse; align-content: flex-end; justify-content: center; gap: 4px; overflow: hidden; pointer-events: none;"></div>
+                </div>
+                <div id="mouth-indicator">👄<br><span style="font-size: 0.95rem; background:rgba(255,255,255,0.8); border-radius:10px; padding:2px 8px; color:#2c3e50;">อ้าปากที่นี่เพื่อรับ</span></div>
+            `;
+
+            showScreen('screen-game');
+            setupModeControls(mode);
+
+            // Timer interval (3 minutes countdown)
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                updateHUD();
+                if (gameState.timeLeft <= 0) endGame();
+            }, 1000);
+
+            // Food Spawner interval
+            gameState.spawnInterval = setInterval(spawnFoodBubble, 1400);
+
+            // Start Main Game Collision Loop
+            gameLoop();
+        }
+
+        function setupModeControls(mode) {
+            const basket = document.getElementById('basket-container');
+            const mouth = document.getElementById('mouth-indicator');
+            const arVideo = document.getElementById('ar-preview-container');
+            
+            document.onmousemove = null;
+            arVideo.style.display = 'none';
+            basket.style.display = 'block';
+            mouth.style.display = 'none';
+
+            if (mode === 'mouse') {
+                document.onmousemove = (e) => {
+                    if (gameState.isGameOver) return;
+                    gameState.basketX = Math.max(100, Math.min(window.innerWidth - 100, e.clientX));
+                    basket.style.left = gameState.basketX + 'px';
+                };
+            } else if (mode === 'touch') {
+                basket.style.left = '50%';
+                basket.style.transform = 'translateX(-50%)';
+            } else if (mode === 'ar') {
+                basket.style.display = 'none'; // Hide basket in AR, user catches with open mouth
+                mouth.style.display = 'block';
+                arVideo.style.display = 'block';
+                initARFaceDetection();
+            }
+        }
+
+        function spawnFoodBubble() {
+            if (gameState.isGameOver) return;
+
+            let fallSpeed = 5.5 + Math.random() * 2.5; // seconds
+            if (gameState.timeLeft < 60) fallSpeed -= 1.5;
+
+            const foodData = FOOD_LIST[Math.floor(Math.random() * FOOD_LIST.length)];
+            const foodEl = document.createElement('div');
+            foodEl.className = 'food-bubble';
+            foodEl.innerHTML = `<div class="emoji">${foodData.emoji}</div><div class="name">${foodData.name}</div>`;
+            
+            const randomX = 60 + Math.random() * (window.innerWidth - 180);
+            foodEl.style.left = randomX + 'px';
+            foodEl.style.top = '-160px';
+            foodEl.style.transition = `top ${fallSpeed}s linear`;
+            
+            // Touch Mode click handler
+            if (gameState.mode === 'touch') {
+                foodEl.style.pointerEvents = 'auto';
+                const handleTouchAction = (e) => {
+                    e.preventDefault();
+                    if (!foodEl.dataset.caught) {
+                        catchFoodSuccess(foodEl, foodData);
+                    }
+                };
+                foodEl.addEventListener('mousedown', handleTouchAction);
+                foodEl.addEventListener('touchstart', handleTouchAction, { passive: false });
+            }
+
+            document.getElementById('game-area').appendChild(foodEl);
+
+            setTimeout(() => {
+                if (!gameState.isGameOver) {
+                    foodEl.style.top = (window.innerHeight + 60) + 'px';
+                }
+            }, 60);
+
+            gameState.activeFoods.push({
+                element: foodEl,
+                data: foodData
+            });
+
+            // Cleanup fallen missed items
+            setTimeout(() => {
+                if (foodEl.parentNode && !foodEl.dataset.caught) {
+                    foodEl.remove();
+                    gameState.activeFoods = gameState.activeFoods.filter(f => f.element !== foodEl);
+                    gameState.combo = 0; // reset combo on miss
+                }
+            }, fallSpeed * 1000);
+        }
+
+        function gameLoop() {
+            if (gameState.isGameOver) return;
+
+            const basket = document.getElementById('basket-container');
+            const mouth = document.getElementById('mouth-indicator');
+            
+            let colliderRect;
+            if (gameState.mode === 'mouse') {
+                colliderRect = basket.getBoundingClientRect();
+            } else if (gameState.mode === 'ar') {
+                colliderRect = mouth.getBoundingClientRect();
+            }
+
+            if (colliderRect && gameState.mode !== 'touch') {
+                gameState.activeFoods.forEach(foodObj => {
+                    if (foodObj.element.dataset.caught) return;
+                    const foodRect = foodObj.element.getBoundingClientRect();
+
+                    const margin = 25;
+                    if (
+                        foodRect.bottom > colliderRect.top + margin &&
+                        foodRect.top < colliderRect.bottom - margin &&
+                        foodRect.right > colliderRect.left + margin &&
+                        foodRect.left < colliderRect.right - margin
+                    ) {
+                        if (gameState.mode === 'ar') {
+                            if (window.isMouthOpen) {
+                                catchFoodSuccess(foodObj.element, foodObj.data);
+                            }
+                        } else {
+                            catchFoodSuccess(foodObj.element, foodObj.data);
+                        }
+                    }
+                });
+            }
+
+            gameState.gameLoopReq = requestAnimationFrame(gameLoop);
+        }
+
+        function catchFoodSuccess(foodEl, foodData) {
+            foodEl.dataset.caught = "true";
+            
+            // Score & Combo
+            gameState.score += 10;
+            gameState.totalCollectedCount++;
+            updateCombo();
+            updateHUD();
+
+            // Stats dictionary tracking
+            if (gameState.collectedFoods[foodData.name]) {
+                gameState.collectedFoods[foodData.name].count++;
+            } else {
+                gameState.collectedFoods[foodData.name] = { count: 1, emoji: foodData.emoji };
+            }
+
+            // Audio feedback
+            playSoundEffect('ping');
+            setTimeout(() => playSoundEffect('pop'), 180);
+
+            const prefix = PRAISE_PREFIXES[Math.floor(Math.random() * PRAISE_PREFIXES.length)];
+            const suffix = PRAISE_SUFFIXES[Math.floor(Math.random() * PRAISE_SUFFIXES.length)];
+            speakThai(`${prefix} รับ${foodData.name} ${suffix}`);
+
+            // Animation path: Food -> Catch point -> Basket
+            const currentRect = foodEl.getBoundingClientRect();
+            let targetX, targetY;
+            
+            if (gameState.mode === 'ar') {
+                const mouthRect = document.getElementById('mouth-indicator').getBoundingClientRect();
+                targetX = mouthRect.left + mouthRect.width/2 - currentRect.width/2;
+                targetY = mouthRect.top + mouthRect.height/2 - currentRect.height/2;
+            } else {
+                const basketRect = document.getElementById('basket-container').getBoundingClientRect();
+                targetX = basketRect.left + basketRect.width/2 - currentRect.width/2;
+                targetY = basketRect.top + 50 - currentRect.height/2;
+            }
+
+            foodEl.style.transition = 'all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            foodEl.style.left = targetX + 'px';
+            foodEl.style.top = targetY + 'px';
+            foodEl.style.transform = 'scale(0.25) rotate(15deg)';
+            foodEl.style.opacity = '0';
+
+            createSparkles(targetX + currentRect.width/2, targetY + currentRect.height/2);
+
+            // Insert real physical item inside SVG basket stack
+            setTimeout(() => {
+                foodEl.remove();
+                
+                const stackContainer = document.getElementById('basket-items-stack');
+                if (stackContainer) {
+                    const itemBadge = document.createElement('div');
+                    itemBadge.style.fontSize = '1.6rem';
+                    itemBadge.style.margin = '-4px';
+                    itemBadge.style.transform = `rotate(${(Math.random() - 0.5) * 25}deg) scale(0.9)`;
+                    itemBadge.style.transition = 'transform 0.2s';
+                    itemBadge.innerText = foodData.emoji;
+                    stackContainer.appendChild(itemBadge);
+
+                    // Limit stack overflow visually
+                    if (stackContainer.children.length > 20) {
+                        stackContainer.removeChild(stackContainer.firstChild);
+                    }
+                }
+
+                // Basket Bounce Animation
+                const basketEl = document.getElementById('basket-container');
+                if (basketEl) {
+                    basketEl.classList.remove('basket-bounce');
+                    void basketEl.offsetWidth;
+                    basketEl.classList.add('basket-bounce');
+                }
+            }, 350);
+        }
+
+        function updateCombo() {
+            gameState.combo++;
+            if (gameState.combo > 1) {
+                const comboEl = document.getElementById('combo-text');
+                comboEl.innerText = `COMBO x${gameState.combo}!`;
+                comboEl.style.opacity = '1';
+                comboEl.style.transform = 'translateX(-50%) scale(1.25)';
+                playSoundEffect('combo');
+                
+                gameState.score += Math.min(gameState.combo * 3, 25);
+
+                clearTimeout(gameState.comboTimer);
+                gameState.comboTimer = setTimeout(() => {
+                    comboEl.style.opacity = '0';
+                    comboEl.style.transform = 'translateX(-50%) scale(1)';
+                }, 900);
+            }
+        }
+
+        function createSparkles(x, y) {
+            const symbols = ['✨', '🫧', '⭐', '💖'];
+            for (let i = 0; i < 3; i++) {
+                const sp = document.createElement('div');
+                sp.className = 'sparkle';
+                sp.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                sp.style.left = (x - 20 + Math.random() * 40) + 'px';
+                sp.style.top = (y - 20 + Math.random() * 40) + 'px';
+                document.getElementById('game-area').appendChild(sp);
+                setTimeout(() => sp.remove(), 700);
+            }
+        }
+
+        function updateHUD() {
+            const mins = Math.floor(gameState.timeLeft / 60);
+            const secs = gameState.timeLeft % 60;
+            const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            document.getElementById('timer-display').innerText = timeStr;
+            document.getElementById('score-display').innerText = gameState.score;
+        }
+
+        function endGame() {
+            gameState.isGameOver = true;
+            clearInterval(gameState.timerInterval);
+            clearInterval(gameState.spawnInterval);
+            cancelAnimationFrame(gameState.gameLoopReq);
+            speakThai("หมดเวลาแล้วครับ เก่งมากๆ เลย");
+
+            document.getElementById('game-area').innerHTML = '';
+            if (window.arCamera) {
+                window.arCamera.stop();
+            }
+
+            document.getElementById('final-score').innerText = gameState.score;
+            document.getElementById('final-count').innerText = gameState.totalCollectedCount;
+            
+            const summaryBasket = document.getElementById('summary-basket');
+            summaryBasket.innerHTML = '';
+            
+            for (const [name, info] of Object.entries(gameState.collectedFoods)) {
+                const badge = document.createElement('div');
+                badge.className = 'summary-item';
+                badge.innerHTML = `${info.emoji} ${name} &times; ${info.count}`;
+                summaryBasket.appendChild(badge);
+            }
+
+            document.getElementById('praise-text').innerText = `คุณเก่งมาก เก็บของกินแสนอร่อยได้ทั้งหมด ${gameState.totalCollectedCount} ชิ้น!`;
+            showScreen('screen-summary');
+        }
+
+        function createBackgroundBubbles() {
+            const container = document.getElementById('bg-bubbles');
+            for (let i = 0; i < 18; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bg-bubble';
+                const size = 25 + Math.random() * 75;
+                bubble.style.width = size + 'px';
+                bubble.style.height = size + 'px';
+                bubble.style.left = Math.random() * 100 + 'vw';
+                bubble.style.animationDuration = (12 + Math.random() * 18) + 's';
+                bubble.style.animationDelay = (Math.random() * 10) + 's';
+                container.appendChild(bubble);
+            }
+        }
+        createBackgroundBubbles();
+
+        window.isMouthOpen = false;
+
+        async function initARFaceDetection() {
+            const loader = document.getElementById('ar-loading');
+            loader.style.display = 'flex';
+            
+            const videoEl = document.getElementById('ar-video');
+            const mouthIndicator = document.getElementById('mouth-indicator');
+
+            try {
+                const faceMesh = new FaceMesh({locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                }});
+
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                faceMesh.onResults((results) => {
+                    if (loader.style.display === 'flex') {
+                        loader.style.display = 'none';
+                        speakThai("ระบบ AR พร้อมแล้ว อ้าปากรับของกินได้เลยครับ");
+                    }
+
+                    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                        const landmarks = results.multiFaceLandmarks[0];
+                        const upperLip = landmarks[13];
+                        const lowerLip = landmarks[14];
+                        
+                        const mouthDistance = Math.abs(lowerLip.y - upperLip.y);
+                        window.isMouthOpen = mouthDistance > 0.035;
+
+                        const noseTip = landmarks[1];
+                        const screenX = (1 - noseTip.x) * window.innerWidth;
+                        const screenY = noseTip.y * window.innerHeight;
+
+                        mouthIndicator.style.left = (screenX - 30) + 'px';
+                        mouthIndicator.style.top = (screenY + 45) + 'px';
+                        mouthIndicator.style.display = 'block';
+
+                        if (window.isMouthOpen) {
+                            mouthIndicator.style.transform = 'scale(1.4)';
+                            mouthIndicator.innerHTML = '👄<br><span style="font-size:0.9rem; color:#27ae60; font-weight:bold; background:#fff; padding:2px 6px; border-radius:8px;">อ้าปากรับอยู่!</span>';
+                        } else {
+                            mouthIndicator.style.transform = 'scale(1)';
+                            mouthIndicator.innerHTML = '👄<br><span style="font-size:0.9rem; color:#2c3e50; background:rgba(255,255,255,0.8); padding:2px 6px; border-radius:8px;">อ้าปากที่นี่</span>';
+                        }
+                    } else {
+                        mouthIndicator.style.display = 'none';
+                    }
+                });
+
+                window.arCamera = new Camera(videoEl, {
+                    onFrame: async () => {
+                        await faceMesh.send({image: videoEl});
+                    },
+                    width: 640,
+                    height: 480,
+                    facingMode: 'user'
+                });
+                
+                await window.arCamera.start();
+            } catch (err) {
+                console.error("AR Error:", err);
+                alert("ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้งานกล้อง หรือเลือกโหมด Touch / Mouse แทนครับ");
+                loader.style.display = 'none';
+                showScreen('screen-mode-select');
+            }
+        }
+    </script>
+</body>
+</html>
