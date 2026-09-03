@@ -73,82 +73,89 @@
 <body class="min-h-screen text-gray-800 flex flex-col relative">
 
     <!-- ปุ่มควบคุมเสียง (มุมขวาบน) -->
+    <!-- จุดที่แก้ไข: ลดขนาดปุ่มลงเล็กน้อย (text-2xl -> text-xl, p-4 -> p-3) -->
     <div class="absolute top-4 right-4 z-50">
-        <button id="muteBtn" onclick="toggleMute()" class="bg-white p-4 rounded-full shadow-md text-2xl hover:bg-gray-100 focus:outline-none focus:ring-4 ring-blue-300">
+        <button id="muteBtn" onclick="toggleMute()" class="bg-white p-3 rounded-full shadow-md text-xl hover:bg-gray-100 focus:outline-none focus:ring-4 ring-blue-300">
             🔊 เสียงเปิด
         </button>
     </div>
 
     <!-- ================= หน้าแรก (Start Screen) ================= -->
     <div id="startScreen" class="flex-1 flex flex-col items-center justify-center p-6 text-center h-screen">
-        <h1 class="text-5xl md:text-7xl font-bold text-blue-600 mb-4">ภาษาไทยจากภาพ</h1>
-        <p class="text-2xl md:text-3xl text-gray-600 mb-12">เกมเรียนรู้ภาษาไทยสำหรับทุกคน</p>
+        <!-- จุดที่แก้ไข: ลดขนาดฟอนต์ 10-15% (text-5xl -> 4xl, md:text-7xl -> 6xl) -->
+        <h1 class="text-4xl md:text-6xl font-bold text-blue-600 mb-4">ภาษาไทยจากภาพ</h1>
+        <p class="text-xl md:text-2xl text-gray-600 mb-10">เกมเรียนรู้ภาษาไทยสำหรับทุกคน</p>
         
-        <div class="flex flex-col gap-6 w-full max-w-md">
-            <button onclick="startGame()" class="big-btn bg-green-500 hover:bg-green-600 text-white text-4xl font-bold py-6 px-10 rounded-3xl shadow-xl focus:outline-none focus:ring-8 ring-green-300">
+        <div class="flex flex-col gap-5 w-full max-w-md">
+            <!-- จุดที่แก้ไข: ลดขนาดปุ่ม (text-4xl -> 3xl, py-6 px-10 -> py-5 px-8) -->
+            <button onclick="startGame()" class="big-btn bg-green-500 hover:bg-green-600 text-white text-3xl font-bold py-5 px-8 rounded-[2rem] shadow-xl focus:outline-none focus:ring-8 ring-green-300">
                 ▶ เริ่มเกม
             </button>
-            <button onclick="testAudio()" class="big-btn bg-blue-100 hover:bg-blue-200 text-blue-700 text-3xl font-bold py-6 px-10 rounded-3xl shadow-lg focus:outline-none focus:ring-8 ring-blue-300">
+            <button onclick="testAudio()" class="big-btn bg-blue-100 hover:bg-blue-200 text-blue-700 text-2xl font-bold py-5 px-8 rounded-[2rem] shadow-lg focus:outline-none focus:ring-8 ring-blue-300">
                 🔊 ทดสอบเสียง
             </button>
         </div>
     </div>
 
     <!-- ================= หน้าเล่นเกม (Game Screen) ================= -->
-    <div id="gameScreen" class="hidden flex-1 flex flex-col w-full max-w-5xl mx-auto p-4 md:p-8">
+    <div id="gameScreen" class="hidden flex-1 flex flex-col w-full max-w-5xl mx-auto p-4 md:p-6">
         
         <!-- แถบสถานะด้านบน -->
-        <div class="flex justify-between items-center bg-white p-4 md:p-6 rounded-3xl shadow-md mb-6 relative">
-            <div class="text-2xl md:text-4xl font-bold text-blue-600">
+        <!-- จุดที่แก้ไข: ลดขนาดแถบสถานะ (p-6 -> p-5, text-4xl -> 3xl, text-5xl -> 4xl) -->
+        <div class="flex justify-between items-center bg-white p-3 md:p-5 rounded-3xl shadow-md mb-5 relative">
+            <div class="text-xl md:text-3xl font-bold text-blue-600">
                 ⭐ คะแนน: <span id="scoreDisplay">0</span>
             </div>
-            <div id="timerDisplay" class="text-3xl md:text-5xl font-bold text-gray-700">
+            <div id="timerDisplay" class="text-2xl md:text-4xl font-bold text-gray-700">
                 03:00
             </div>
-            <!-- จุดแสดงคะแนนลอยตัว (+10) -->
             <div id="scoreEffectArea" class="absolute left-10 top-16"></div>
         </div>
 
         <!-- พื้นที่คำถาม -->
-        <div class="flex flex-col items-center justify-center bg-white p-6 md:p-10 rounded-3xl shadow-md mb-6 text-center">
-            <h2 id="questionText" class="text-4xl md:text-5xl font-bold mb-6">สิ่งนี้คืออะไร?</h2>
+        <div class="flex flex-col items-center justify-center bg-white p-5 md:p-8 rounded-3xl shadow-md mb-5 text-center">
+            <!-- จุดที่แก้ไข: ลดขนาดข้อความคำถาม (text-5xl -> 4xl) -->
+            <h2 id="questionText" class="text-3xl md:text-4xl font-bold mb-5">สิ่งนี้คืออะไร?</h2>
             
-            <button onclick="speakQuestion()" class="big-btn bg-blue-100 text-blue-700 px-8 py-4 rounded-full text-2xl md:text-3xl font-bold flex items-center gap-3 hover:bg-blue-200 focus:outline-none focus:ring-4 ring-blue-300 mb-6">
+            <button onclick="speakQuestion()" class="big-btn bg-blue-100 text-blue-700 px-6 py-3 rounded-full text-xl md:text-2xl font-bold flex items-center gap-3 hover:bg-blue-200 focus:outline-none focus:ring-4 ring-blue-300 mb-5">
                 🔊 ฟังคำถาม
             </button>
 
             <!-- รูปภาพขนาดใหญ่ (Emoji) -->
-            <div id="questionImage" class="text-8xl md:text-[160px] leading-none mb-4 drop-shadow-lg">
+            <!-- จุดที่แก้ไข: ลดขนาดรูปภาพคำถาม (text-[160px] -> [130px]) -->
+            <div id="questionImage" class="text-7xl md:text-[130px] leading-none mb-2 drop-shadow-lg">
                 🏠
             </div>
         </div>
 
         <!-- ข้อความแจ้งเตือน ถูก/ผิด -->
-        <div id="feedbackText" class="text-center text-4xl md:text-5xl font-bold h-16 mb-4 transition-opacity duration-300 opacity-0">
+        <!-- จุดที่แก้ไข: ลดขนาดข้อความ (text-5xl -> 4xl) -->
+        <div id="feedbackText" class="text-center text-3xl md:text-4xl font-bold h-12 mb-4 transition-opacity duration-300 opacity-0">
             <!-- จะแสดงคำว่า "เก่งมาก! ถูกต้อง" หรือ "ลองใหม่อีกครั้ง" -->
         </div>
 
         <!-- พื้นที่คำตอบ (2 ตัวเลือก) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 pb-10" id="optionsContainer">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 pb-10" id="optionsContainer">
             <!-- ตัวเลือกจะถูกสร้างด้วย JavaScript -->
         </div>
     </div>
 
     <!-- ================= หน้าจบเกม (Game Over Screen) ================= -->
     <div id="endScreen" class="hidden flex-1 flex flex-col items-center justify-center p-6 text-center h-screen">
-        <h2 class="text-6xl md:text-8xl font-bold text-red-500 mb-8">หมดเวลาแล้ว!</h2>
+        <!-- จุดที่แก้ไข: ลดขนาดหน้าจอจบเกม -->
+        <h2 class="text-5xl md:text-7xl font-bold text-red-500 mb-6">หมดเวลาแล้ว!</h2>
         
-        <div class="bg-white p-10 rounded-3xl shadow-xl w-full max-w-lg mb-10">
-            <p class="text-3xl md:text-4xl text-gray-600 mb-4">คะแนนของคุณ</p>
-            <p class="text-7xl md:text-9xl font-bold text-yellow-500 mb-8" id="finalScore">0</p>
+        <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-lg mb-8">
+            <p class="text-2xl md:text-3xl text-gray-600 mb-4">คะแนนของคุณ</p>
+            <p class="text-6xl md:text-8xl font-bold text-yellow-500 mb-8" id="finalScore">0</p>
             
-            <div class="text-2xl md:text-3xl text-gray-700 text-left space-y-4">
+            <div class="text-xl md:text-2xl text-gray-700 text-left space-y-4">
                 <p>✅ ตอบถูก: <span id="correctCount" class="font-bold text-green-600">0</span> ข้อ</p>
                 <p>🎮 เล่นทั้งหมด: <span id="playedCount" class="font-bold text-blue-600">0</span> ข้อ</p>
             </div>
         </div>
 
-        <button onclick="resetToStart()" class="big-btn bg-blue-500 hover:bg-blue-600 text-white text-4xl font-bold py-6 px-12 rounded-3xl shadow-xl focus:outline-none focus:ring-8 ring-blue-300">
+        <button onclick="resetToStart()" class="big-btn bg-blue-500 hover:bg-blue-600 text-white text-3xl font-bold py-5 px-10 rounded-[2rem] shadow-xl focus:outline-none focus:ring-8 ring-blue-300">
             🔄 เล่นอีกครั้ง
         </button>
     </div>
@@ -156,22 +163,18 @@
     <script>
         // ================= ฐานข้อมูลคำศัพท์ (คลังภาพและคำ) =================
         const vocabulary = [
-            // สิ่งของ
             { word: "บ้าน", icon: "🏠" }, { word: "โต๊ะ", icon: "🪑" },
             { word: "หนังสือ", icon: "📖" }, { word: "โทรศัพท์", icon: "📱" },
             { word: "แก้วน้ำ", icon: "🥛" }, { word: "ร่ม", icon: "☂️" },
             { word: "รองเท้า", icon: "👟" }, { word: "หมวก", icon: "🧢" },
-            // สัตว์
             { word: "ปลา", icon: "🐟" }, { word: "แมว", icon: "🐱" },
             { word: "สุนัข", icon: "🐶" }, { word: "นก", icon: "🐦" },
             { word: "ช้าง", icon: "🐘" }, { word: "หมู", icon: "🐷" },
             { word: "ไก่", icon: "🐔" }, { word: "ม้า", icon: "🐴" },
-            // อาหาร
             { word: "ข้าว", icon: "🍚" }, { word: "กล้วย", icon: "🍌" },
             { word: "แอปเปิล", icon: "🍎" }, { word: "ไข่", icon: "🥚" },
             { word: "น้ำ", icon: "💧" }, { word: "เค้ก", icon: "🍰" },
             { word: "แตงโม", icon: "🍉" }, { word: "ขนมปัง", icon: "🍞" },
-            // ธรรมชาติ
             { word: "ดวงอาทิตย์", icon: "☀️" }, { word: "ต้นไม้", icon: "🌳" },
             { word: "ดอกไม้", icon: "🌸" }, { word: "ภูเขา", icon: "⛰️" },
             { word: "เมฆ", icon: "☁️" }, { word: "ไฟ", icon: "🔥" }
@@ -179,52 +182,41 @@
 
         // ================= ตัวแปรสถานะเกม =================
         let score = 0;
-        let timeLeft = 180; // 3 นาที = 180 วินาที
+        let timeLeft = 180;
         let timerInterval;
         let isMuted = false;
         let currentCorrectAnswer = null;
         let playedQuestionsCount = 0;
         let correctAnswersCount = 0;
-        let canAnswer = true; // ป้องกันการกดซ้ำตอนกำลังเปลี่ยนข้อ
+        let canAnswer = true;
 
-        // ================= ระบบเสียง (Web Audio API & Speech Synthesis) =================
+        // ================= ระบบเสียงประกอบ (Web Audio API) =================
         let audioCtx;
-
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // ฟังก์ชันสร้างเสียงเอฟเฟกต์ง่ายๆ
         function playTone(frequency, type, duration, volume = 0.1) {
             if (isMuted) return;
             initAudio();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-            
             oscillator.type = type;
             oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-            
             gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-            
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + duration);
         }
 
-        // เสียงต่างๆ ในเกม
         function playSfxClick() { playTone(600, 'sine', 0.1, 0.05); }
         function playSfxCorrect() { 
-            playTone(523.25, 'sine', 0.15, 0.1); // C5
-            setTimeout(() => playTone(659.25, 'sine', 0.15, 0.1), 100); // E5
-            setTimeout(() => playTone(783.99, 'sine', 0.3, 0.1), 200);  // G5
+            playTone(523.25, 'sine', 0.15, 0.1); 
+            setTimeout(() => playTone(659.25, 'sine', 0.15, 0.1), 100); 
+            setTimeout(() => playTone(783.99, 'sine', 0.3, 0.1), 200);  
         }
         function playSfxWrong() { 
             playTone(200, 'sawtooth', 0.3, 0.1); 
@@ -235,22 +227,83 @@
             setTimeout(() => playTone(250, 'square', 0.8, 0.1), 400);
         }
 
-        // ระบบอ่านออกเสียงภาษาไทย
-        function speak(text) {
-            if (isMuted) return;
+        // ================= จุดที่แก้ไข: ระบบอ่านออกเสียงภาษาไทย (TTS สำหรับ Windows/Mobile) =================
+        let thaiVoice = null;
+
+        function loadThaiVoice() {
+            if (!('speechSynthesis' in window)) {
+                console.warn('Browser ไม่รองรับ Speech Synthesis');
+                return;
+            }
+
+            const voices = window.speechSynthesis.getVoices();
             
-            // ยกเลิกเสียงที่กำลังพูดอยู่
-            window.speechSynthesis.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'th-TH'; // ภาษาไทย
-            utterance.rate = 0.9;     // พูดช้าลงเล็กน้อยเพื่อให้ฟังชัด
-            utterance.pitch = 1.0;
-            
-            window.speechSynthesis.speak(utterance);
+            // ค้นหาเสียงภาษาไทย
+            thaiVoice =
+                voices.find(v => v.lang === 'th-TH') ||
+                voices.find(v => v.lang.toLowerCase().startsWith('th')) ||
+                null;
+
+            // Debug Console ตามที่ขอ
+            console.log('SpeechSynthesis supported:', 'speechSynthesis' in window);
+            console.log('Available voices:', voices);
+            if (thaiVoice) {
+                console.log('Thai Voice selected:', thaiVoice.name);
+            } else if (voices.length > 0) {
+                console.warn('ไม่พบเสียงภาษาไทยในระบบ Browser นี้ ระบบจะใช้เสียง Default แทน');
+            }
         }
 
-        // ฟังก์ชันทดสอบเสียงจากหน้าแรก
+        // รอจนกว่า Browser จะโหลดเสียงเสร็จ (สำคัญมากสำหรับ Windows Chrome/Edge)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadThaiVoice;
+            loadThaiVoice(); // เรียกครั้งแรกเผื่อเสียงโหลดเสร็จแล้ว
+        }
+
+        function speak(text) {
+            if (isMuted) return;
+            if (!('speechSynthesis' in window)) {
+                console.warn('Speech Synthesis ไม่รองรับ');
+                return;
+            }
+
+            // เคลียร์คิวเสียงเก่าก่อนพูดใหม่ทุกครั้ง เพื่อป้องกันเสียงค้าง/พูดซ้อน
+            window.speechSynthesis.cancel();
+
+            const speakNow = () => {
+                const voices = window.speechSynthesis.getVoices();
+                // หาเสียงไทยอีกครั้งเผื่อโหลดเสร็จทีหลัง
+                const voice =
+                    voices.find(v => v.lang === 'th-TH') ||
+                    voices.find(v => v.lang.toLowerCase().startsWith('th')) ||
+                    thaiVoice;
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'th-TH';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+
+                if (voice) {
+                    utterance.voice = voice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            };
+
+            // ถ้ามี voices โหลดมาแล้วให้พูดเลย
+            if (window.speechSynthesis.getVoices().length > 0) {
+                speakNow();
+            } else {
+                // ถ้า voices ยังไม่มา ให้รอโหลดเสร็จแล้วค่อยพูด (Fallback สำหรับครั้งแรก)
+                window.speechSynthesis.onvoiceschanged = () => {
+                    window.speechSynthesis.onvoiceschanged = null;
+                    speakNow();
+                    loadThaiVoice();
+                };
+            }
+        }
+
         function testAudio() {
             initAudio();
             playSfxClick();
@@ -277,23 +330,23 @@
         // ================= ระบบจัดการเกม (Game Logic) =================
 
         function startGame() {
-            initAudio(); // กระตุ้น Audio API ในการคลิกครั้งแรก
+            initAudio(); 
             playSfxClick();
             
-            // รีเซ็ตค่า
+            // จุดที่แก้ไข: ให้ระบบทดสอบพูดทันทีเมื่อเริ่มเกมเพื่อปลดล็อก Autoplay Policy และตอบสนอง Request ของผู้ใช้
+            speak("เริ่มเกม");
+            
             score = 0;
             timeLeft = 180;
             playedQuestionsCount = 0;
             correctAnswersCount = 0;
             updateScoreDisplay();
             
-            // เปลี่ยนหน้าจอ
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('endScreen').classList.add('hidden');
             document.getElementById('gameScreen').classList.remove('hidden');
             document.getElementById('timerDisplay').classList.remove('timer-warning');
             
-            // เริ่มเวลาและโหลดคำถาม
             updateTimerDisplay();
             clearInterval(timerInterval);
             timerInterval = setInterval(timerTick, 1000);
@@ -306,13 +359,9 @@
             updateTimerDisplay();
             
             const timerEl = document.getElementById('timerDisplay');
-            if (timeLeft === 30) {
-                timerEl.classList.add('timer-warning');
-            }
+            if (timeLeft === 30) timerEl.classList.add('timer-warning');
             
-            if (timeLeft <= 0) {
-                endGame();
-            }
+            if (timeLeft <= 0) endGame();
         }
 
         function updateTimerDisplay() {
@@ -326,7 +375,6 @@
             document.getElementById('scoreDisplay').innerText = score;
         }
 
-        // สุ่มตัวเลขช่วง 0 ถึง max-1
         function getRandomInt(max) {
             return Math.floor(Math.random() * max);
         }
@@ -335,109 +383,86 @@
             canAnswer = true;
             playedQuestionsCount++;
             
-            // ซ่อนข้อความแจ้งเตือน
             const feedback = document.getElementById('feedbackText');
             feedback.style.opacity = '0';
             
-            // สุ่มคำตอบที่ถูก
             const correctIndex = getRandomInt(vocabulary.length);
             currentCorrectAnswer = vocabulary[correctIndex];
             
-            // สุ่มคำตอบที่ผิด (ต้องไม่ซ้ำกับคำตอบที่ถูก)
             let wrongIndex = getRandomInt(vocabulary.length);
-            while (wrongIndex === correctIndex) {
-                wrongIndex = getRandomInt(vocabulary.length);
-            }
+            while (wrongIndex === correctIndex) wrongIndex = getRandomInt(vocabulary.length);
             const wrongAnswer = vocabulary[wrongIndex];
             
-            // ตั้งค่าหน้าจอ
             document.getElementById('questionImage').innerText = currentCorrectAnswer.icon;
             
-            // สุ่มตำแหน่งซ้าย-ขวา
             const options = [currentCorrectAnswer, wrongAnswer];
-            if (Math.random() > 0.5) options.reverse(); // สลับตำแหน่งแบบสุ่ม
+            if (Math.random() > 0.5) options.reverse(); 
             
-            // สร้างปุ่มคำตอบ
             const container = document.getElementById('optionsContainer');
-            container.innerHTML = ''; // ล้างของเก่า
+            container.innerHTML = ''; 
             
             options.forEach(option => {
                 const isCorrect = option.word === currentCorrectAnswer.word;
                 
-                // โครงสร้างปุ่มขนาดใหญ่
+                // จุดที่แก้ไข: ลดขนาดปุ่มคำตอบ 10-15% 
+                // (p-8 -> p-6, text-[140px] -> [110px], text-6xl -> 5xl)
                 const btnHTML = `
                     <button id="btn-${option.word}" onclick="handleAnswer('${option.word}', this)" 
-                        class="big-btn w-full flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] shadow-lg border-8 border-gray-100 hover:border-blue-300 focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
+                        class="big-btn w-full flex flex-col items-center justify-center p-6 bg-white rounded-[2.5rem] shadow-lg border-8 border-gray-100 hover:border-blue-300 focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
                         
-                        <!-- รูปขนาดใหญ่ -->
-                        <div class="text-[100px] md:text-[140px] leading-none mb-6 drop-shadow-md">
+                        <div class="text-[80px] md:text-[110px] leading-none mb-4 drop-shadow-md">
                             ${option.icon}
                         </div>
                         
-                        <!-- ข้อความคำตอบ -->
-                        <div class="text-5xl md:text-6xl font-bold mb-8 text-gray-800">
+                        <div class="text-4xl md:text-5xl font-bold mb-6 text-gray-800">
                             ${option.word}
                         </div>
                         
-                        <!-- ปุ่มฟังเสียงคำตอบ (หยุด event bubbling เพื่อไม่ให้ถือว่าเป็นการตอบ) -->
+                        <!-- จุดที่แก้ไข: ลดขนาดปุ่มฟังคำตอบ (px-8 py-4 -> px-6 py-3, text-3xl -> 2xl) -->
                         <div onclick="event.stopPropagation(); playSfxClick(); speak('${option.word}')" 
-                            class="bg-blue-100 text-blue-700 px-8 py-4 rounded-full text-3xl font-bold flex items-center gap-3 hover:bg-blue-200 hover:scale-105 transition-transform border-4 border-blue-200">
+                            class="bg-blue-100 text-blue-700 px-6 py-3 rounded-full text-xl md:text-2xl font-bold flex items-center gap-3 hover:bg-blue-200 hover:scale-105 transition-transform border-4 border-blue-200">
                             🔊 ฟังคำว่า ${option.word}
                         </div>
                     </button>
                 `;
                 container.insertAdjacentHTML('beforeend', btnHTML);
             });
-            
-            // อ่านคำถามอัตโนมัติเมื่อเริ่มข้อใหม่
-            // setTimeout(() => speakQuestion(), 500);
         }
 
         function handleAnswer(selectedWord, btnElement) {
-            if (!canAnswer) return; // ป้องกันการกดรัวๆ
+            if (!canAnswer) return; 
             
             const feedback = document.getElementById('feedbackText');
             
             if (selectedWord === currentCorrectAnswer.word) {
-                // ตอบถูก
-                canAnswer = false; // บล็อคปุ่ม
+                canAnswer = false; 
                 correctAnswersCount++;
                 score += 10;
                 
-                // เสียงและเอฟเฟกต์
                 playSfxCorrect();
                 speak("เก่งมาก ถูกต้อง " + selectedWord);
                 
-                // การแสดงผลปุ่ม
                 btnElement.classList.add('correct-animation');
                 
-                // ข้อความแจ้งเตือน
                 feedback.innerText = "เก่งมาก! ถูกต้อง";
-                feedback.className = "text-center text-4xl md:text-5xl font-bold h-16 mb-4 transition-opacity duration-300 text-green-600 opacity-100";
+                feedback.className = "text-center text-3xl md:text-4xl font-bold h-12 mb-4 transition-opacity duration-300 text-green-600 opacity-100";
                 
-                // อนิเมชั่นคะแนนลอย
                 showScoreAnimation();
                 updateScoreDisplay();
                 
-                // รอ 1.5 วินาทีแล้วไปข้อถัดไป
                 setTimeout(() => {
                     loadNextQuestion();
                 }, 1500);
                 
             } else {
-                // ตอบผิด
                 playSfxWrong();
                 speak("ลองใหม่อีกครั้ง");
                 
-                // การแสดงผลปุ่ม
                 btnElement.classList.add('shake-animation');
-                setTimeout(() => btnElement.classList.remove('shake-animation'), 400); // เอาคลาสออกเพื่อให้สั่นใหม่ได้
+                setTimeout(() => btnElement.classList.remove('shake-animation'), 400); 
                 
-                // ข้อความแจ้งเตือน
                 feedback.innerText = "❌ ลองใหม่อีกครั้ง";
-                feedback.className = "text-center text-4xl md:text-5xl font-bold h-16 mb-4 transition-opacity duration-300 text-red-500 opacity-100";
-                
-                // ไม่เปลี่ยนข้อ ให้เลือกใหม่
+                feedback.className = "text-center text-3xl md:text-4xl font-bold h-12 mb-4 transition-opacity duration-300 text-red-500 opacity-100";
             }
         }
 
@@ -448,7 +473,6 @@
             floater.innerText = '+10 ⭐';
             area.appendChild(floater);
             
-            // ลบ element เมื่อจบอนิเมชั่น (1 วินาที)
             setTimeout(() => {
                 floater.remove();
             }, 1000);
@@ -473,9 +497,7 @@
             document.getElementById('startScreen').classList.remove('hidden');
         }
 
-        // แก้ไขปัญหารองรับ Keyboard การใช้ Tab และ Enter
         document.addEventListener('keydown', function(event) {
-            // ทำให้แน่ใจว่าเวลากด Enter บนปุ่ม จะทำงานเหมือนการคลิก
             if(event.key === "Enter" && document.activeElement.tagName === "BUTTON"){
                 document.activeElement.click();
             }
