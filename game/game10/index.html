@@ -377,7 +377,7 @@
     <!-- Screen 3: Gameplay Screen -->
     <div id="screen-game" class="screen hidden" style="align-items: flex-start;">
         <div id="game-hud">
-            <div class="hud-bubble">⏱️ <span id="timer-display">03:00</span></div>
+            <div class="hud-bubble">⏱️ <span id="timer-display">01:00</span></div>
             <div class="hud-bubble" id="sound-toggle" onclick="toggleSound()">🔊</div>
             <div class="hud-bubble">⭐ <span id="score-display">0</span></div>
         </div>
@@ -496,8 +496,7 @@
         let gameState = {
             mode: '', // 'ar', 'touch', 'mouse'
             score: 0,
-            timeLeft: 180, // 3 minutes
-            isGameOver: true,
+            timeLeft: 60,            isGameOver: true,
             activeFoods: [],
             collectedFoods: {},
             totalCollectedCount: 0,
@@ -594,8 +593,7 @@
             initAudioContext();
             gameState.mode = mode;
             gameState.score = 0;
-            gameState.timeLeft = 180;
-            gameState.isGameOver = false;
+            gameState.timeLeft = 60;            gameState.isGameOver = false;
             gameState.activeFoods = [];
             gameState.collectedFoods = {};
             gameState.totalCollectedCount = 0;
