@@ -148,6 +148,31 @@
            Header
         ========================= */
 
+		.topbar-menu {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.visitor-counter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.visitor-counter strong {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+
+
         .topbar {
             position: sticky;
             top: 14px;
@@ -296,14 +321,21 @@
 
             font-size: 14px;
         }
-
-        .hero h1 {
-            margin: 0;
-            font-family: 'Mali', cursive;
-            font-size: clamp(35px, 6vw, 39px);
-            font-weight: 700;
-            line-height: 1.1;
-        }
+.hero h1 {
+    margin: 0;
+    font-family: 'Mali', cursive;
+    font-size: clamp(28px, 6vw, 39px);
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+@media (max-width: 700px) {
+    .hero h1 {
+        font-size: 30px;
+        line-height: 1.25;
+        white-space: normal;
+    }
+}
 
         .hero p {
             margin: 18px 0 0;
@@ -505,6 +537,235 @@
         .play-btn:active {
             transform: scale(.98);
         }
+
+
+/* =========================
+   Game Buttons
+========================= */
+
+.game-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.game-buttons button {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    padding: 12px 10px;
+
+    border: none;
+    border-radius: 15px;
+
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: .2s;
+}
+
+/* ปุ่มเล่นเกม */
+.game-buttons .play-btn {
+    background: linear-gradient(135deg,#4f46e5,#7c3aed);
+    color: white;
+}
+
+.game-buttons .play-btn:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+/* ปุ่มวิธีการเล่น */
+.info-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    padding: 12px 18px;
+
+    border: 1px solid #c7d2fe;
+    border-radius: 15px;
+
+    background: #eef2ff;
+    color: #4f46e5;
+
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: .2s;
+}
+
+.info-btn:hover {
+    background: #e0e7ff;
+    transform: translateY(-1px);
+}
+
+/* =========================
+   วิธีการเล่น Modal
+========================= */
+
+.info-modal {
+    position: fixed;
+    inset: 0;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(15, 23, 42, .72);
+
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+    z-index: 9999;
+}
+
+.info-modal.show {
+    display: flex;
+}
+
+/* กล่องอินโฟกราฟิก */
+.info-modal-content {
+    position: relative;
+
+    max-width: 900px;
+    max-height: 90vh;
+
+    background: white;
+
+    border-radius: 22px;
+
+    padding: 10px;
+
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.30);
+
+    animation: infoPopup .3s ease;
+}
+
+/* รูปวิธีการเล่น */
+.info-modal-content img {
+    display: block;
+
+    max-width: 100%;
+    max-height: 85vh;
+
+    width: auto;
+    height: auto;
+
+    object-fit: contain;
+
+    border-radius: 15px;
+}
+
+/* ปุ่ม X */
+.info-close {
+    position: absolute;
+
+    top: -14px;
+    right: -14px;
+
+    width: 40px;
+    height: 40px;
+
+    display: grid;
+    place-items: center;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #ef4444;
+    color: white;
+
+    font-size: 25px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    box-shadow: 0 5px 20px rgba(0,0,0,.25);
+
+    z-index: 2;
+
+    transition: .2s;
+}
+
+.info-close:hover {
+    transform: scale(1.08);
+    background: #dc2626;
+}
+
+/* Animation เด้งเข้ากลางจอ */
+@keyframes infoPopup {
+
+    0% {
+        opacity: 0;
+        transform: scale(.75);
+    }
+
+    70% {
+        opacity: 1;
+        transform: scale(1.04);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* มือถือ */
+@media (max-width: 700px) {
+
+    .game-buttons {
+        gap: 8px;
+    }
+
+    .game-buttons button {
+        padding: 11px 6px;
+        font-size: 14px;
+    }
+
+    .info-modal {
+        padding: 15px;
+    }
+
+    .info-modal-content {
+        max-width: 100%;
+        max-height: 88vh;
+
+        padding: 7px;
+
+        border-radius: 18px;
+    }
+
+    .info-modal-content img {
+        max-height: 82vh;
+    }
+
+    .info-close {
+        top: -10px;
+        right: -10px;
+
+        width: 36px;
+        height: 36px;
+
+        font-size: 22px;
+    }
+}
+
 
         /* =========================
            Footer
@@ -791,31 +1052,36 @@
          TOP BAR
     ========================== -->
 
-    <header class="topbar">
+<header class="topbar">
 
-        <div class="brand">
+    <div class="brand">
 
-<div class="brand-icon">
-    <img src="./assets/icon-512.png" alt="M-Learn AR">
-</div>
-
-            <div>
-                <div class="brand-title">
-                    M Learn AR
-                </div>
-
-                <div class="brand-subtitle">
-                    เกมการเรียนรู้ภาษาไทย
-                </div>
-            </div>
-
+        <div class="brand-icon">
+            <img src="./assets/icon-512.png" alt="M-Learn AR">
         </div>
 
-        <a href="#games" class="home-btn">
-            🎮 เกมทั้งหมด
-        </a>
+        <div>
+            <div class="brand-title">
+                นวัตกรรมส่งเสริมการอ่านเพื่อการเรียนรู้ M Learn AR
+            </div>
 
-    </header>
+            <div class="brand-subtitle">
+                ห้องสมุดประชาชนอำเภอแม่ลาน
+            </div>
+        </div>
+
+    </div>
+
+    <div class="topbar-menu">
+
+        <div class="visitor-counter">
+            👀 ผู้เข้าชมทั้งหมด
+            <strong id="visitor-count">กำลังโหลด...</strong>
+        </div>
+
+    </div>
+
+</header>
 
 
     <!-- =========================
@@ -831,7 +1097,8 @@
             </div>
 
             <h1>
-                นวัตกรรมส่งเสริมการอ่านเพื่อการเรียนรู้<br>
+                นวัตกรรมส่งเสริมการอ่านเพื่อการเรียนรู้ M Learn AR
+				<br>
                 ห้องสมุดประชาชนอำเภอแม่ลาน
             </h1>
 
@@ -895,25 +1162,36 @@
 
                     </div>
 
-                    <div class="game-body">
+<div class="game-body">
 
-                        <h3>
-                            เกมจับพยัญชนะไทย ใส่ตะกร้า
-                        </h3>
+    <h3>
+        เกมจับพยัญชนะไทย ใส่ตะกร้า
+    </h3>
 
-                        <p class="game-description">
-                            เกมการเรียนรู้ภาษาไทยสเด็กและเยาวชน
-                            ฝึกทักษะผ่านการเล่นแบบโต้ตอบ
-                        </p>
+    <p class="game-description">
+        เกมการเรียนรู้ภาษาไทยสเด็กและเยาวชน
+        ฝึกทักษะผ่านการเล่นแบบโต้ตอบ
+    </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game1/index.html')">
+    <div class="game-buttons">
 
-                            ▶ เล่นเกม
+        <button class="play-btn"
+                onclick="openGame('game/game1/index.html')">
 
-                        </button>
+            ▶ เล่นเกม
 
-                    </div>
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame1.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
+
+    </div>
+
+</div>
 
                 </article>
 
@@ -943,12 +1221,21 @@
                             ฝึกทักษะผ่านการเล่นแบบโต้ตอบ
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game2/index.html')">
+ <div class="game-buttons">
 
-                            ▶ เล่นเกม
+        <button class="play-btn"
+                onclick="openGame('game/game2/index.html')">
 
-                        </button>
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame2.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1011,12 +1298,21 @@
                             สำหรับนักศึกษา สกร.
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game3/index.html')">
+ <div class="game-buttons">
 
-                            ▶ เล่นเกม
+        <button class="play-btn"
+                onclick="openGame('game/game3/index.html')">
 
-                        </button>
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame3.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1046,12 +1342,21 @@
                             สำหรับนักศึกษา สกร.
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game4/index.html')">
+ <div class="game-buttons">
 
-                            ▶ เล่นเกม
+        <button class="play-btn"
+                onclick="openGame('game/game4/index.html')">
 
-                        </button>
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame4.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1106,10 +1411,21 @@
                             เกมฝึกทักษะภาษาไทยสำหรับประชาชน
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game5/index.html')">
-                            ▶ เล่นเกม
-                        </button>
+ <div class="game-buttons">
+
+        <button class="play-btn"
+                onclick="openGame('game/game5/index.html')">
+
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame5.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1131,10 +1447,21 @@
                             ฝึกภาษาไทยผ่านเกมและกิจกรรม
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game6/index.html')">
-                            ▶ เล่นเกม
-                        </button>
+ <div class="game-buttons">
+
+        <button class="play-btn"
+                onclick="openGame('game/game6/index.html')">
+
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame6.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1189,10 +1516,21 @@
                             เกมภาษาไทยที่ออกแบบให้เล่นง่ายสำหรับผู้สูงวัย
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game7/index.html')">
-                            ▶ เล่นเกม
-                        </button>
+ <div class="game-buttons">
+
+        <button class="play-btn"
+                onclick="openGame('game/game7/index.html')">
+
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame7.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1214,11 +1552,21 @@
                             ฝึกสมองและทักษะภาษาไทยอย่างเพลิดเพลิน
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game8/index.html')">
-                            ▶ เล่นเกม
-                        </button>
+ <div class="game-buttons">
 
+        <button class="play-btn"
+                onclick="openGame('game/game8/index.html')">
+
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame8.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
                     </div>
 
                 </article>
@@ -1272,10 +1620,21 @@
                             เกมภาษาไทยที่ออกแบบโดยคำนึงถึงการเข้าถึง
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game9/index.html')">
-                            ▶ เล่นเกม
-                        </button>
+ <div class="game-buttons">
+
+        <button class="play-btn"
+                onclick="openGame('game/game9/index.html')">
+
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame9.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1297,10 +1656,21 @@
                             สนุกกับการเรียนรู้ภาษาไทยในรูปแบบใหม่
                         </p>
 
-                        <button class="play-btn"
-                                onclick="openGame('game/game10/index.html')">
-                            ▶ เล่นเกม
-                        </button>
+ <div class="game-buttons">
+
+        <button class="play-btn"
+                onclick="openGame('game/game10/index.html')">
+
+            ▶ เล่นเกม
+
+        </button>
+
+        <button class="info-btn"
+                onclick="showGameInfo('assets/infogame10.png')">
+
+            ℹ️ วิธีการเล่น
+
+        </button>
 
                     </div>
 
@@ -1314,15 +1684,130 @@
 
 
     <footer>
-        M Learn AR © 2026
+        นวัตกรรมส่งเสริมการอ่านเพื่อการเรียนรู้ M Learn AR © 2026
         <br>
-        นวัตกรรมส่งเสริมการอ่านเพื่อการเรียนรู้ เกม และเทคโนโลยี AR
-    </footer>
+        พัฒนาโดย ธนิดา นกเส้ง
+		<br>
+		บรรณารักษ์
+ ห้องสมุดประชาชนอำเภอแม่ลาน   </footer>
+
+<div id="infoModal"
+     class="info-modal"
+     onclick="closeGameInfo(event)">
+
+    <div class="info-modal-content">
+
+        <button type="button"
+                class="info-close"
+                onclick="closeGameInfo()">
+            ×
+        </button>
+
+        <img id="infoImage"
+             src=""
+             alt="วิธีการเล่นเกม">
+
+    </div>
 
 </div>
 
+</div>
+<script>
+
+function showGameInfo(imagePath) {
+
+    const modal = document.getElementById('infoModal');
+    const image = document.getElementById('infoImage');
+
+    image.src = imagePath;
+
+    modal.classList.add('show');
+
+    document.body.style.overflow = 'hidden';
+}
+
+
+function closeGameInfo(event) {
+
+    // ถ้าคลิกด้านในกล่อง ไม่ต้องปิด
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+
+    const modal = document.getElementById('infoModal');
+
+    modal.classList.remove('show');
+
+    document.body.style.overflow = '';
+}
+
+
+// กด ESC เพื่อปิด
+document.addEventListener('keydown', function(event) {
+
+    if (event.key === 'Escape') {
+        closeGameInfo();
+    }
+
+});
+
+</script>
+
+<script
+    src="https://page-views-api.ratneshc.com/script"
+    data-site="maelanlib.github.io"
+    data-path="/thai-learning-games/"
+    defer>
+</script>
 
 <script>
+
+    // ==========================================
+    // Visitor Counter
+    // ==========================================
+
+    async function loadVisitorCount() {
+
+        const counter = document.getElementById("visitor-count");
+
+        try {
+
+            const response = await fetch(
+                "https://page-views-api.ratneshc.com/api/v1/views?site=maelanlib.github.io&path=/thai-learning-games/"
+            );
+
+            if (!response.ok) {
+                throw new Error("ไม่สามารถโหลดจำนวนผู้เข้าชมได้");
+            }
+
+            const data = await response.json();
+
+            const views = Number(data.views || 0);
+
+            counter.textContent = views.toLocaleString("th-TH") + " คน";
+
+        } catch (error) {
+
+            console.error("Visitor Counter Error:", error);
+
+            counter.textContent = "ไม่สามารถโหลดได้";
+
+        }
+
+    }
+
+
+    // โหลดจำนวนผู้เข้าชม
+    document.addEventListener("DOMContentLoaded", function () {
+
+        loadVisitorCount();
+
+    });
+
+
+    // ==========================================
+    // เปิดเกม
+    // ==========================================
 
     function openGame(path) {
 
@@ -1335,4 +1820,3 @@
 
 </body>
 </html>
-
