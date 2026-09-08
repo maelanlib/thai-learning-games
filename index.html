@@ -843,6 +843,67 @@
             }
         }
     </style>
+
+
+
+	
+<script>
+(function () {
+    const VERSION_FILE = './version.json';
+    const VERSION_KEY = 'mlearn-ar-version';
+
+    async function checkForUpdate() {
+        try {
+            const response = await fetch(
+                VERSION_FILE + '?t=' + Date.now(),
+                {
+                    cache: 'no-store'
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            const latestVersion = data.version;
+
+            if (!latestVersion) {
+                return;
+            }
+
+            const currentVersion = localStorage.getItem(VERSION_KEY);
+
+            // เปิดครั้งแรก
+            if (!currentVersion) {
+                localStorage.setItem(VERSION_KEY, latestVersion);
+                return;
+            }
+
+            // มีเวอร์ชันใหม่
+            if (currentVersion !== latestVersion) {
+                localStorage.setItem(VERSION_KEY, latestVersion);
+
+                // เปลี่ยน URL เพื่อบังคับให้ browser ขอ index.html ใหม่
+                const url = new URL(window.location.href);
+
+                url.searchParams.set('v', latestVersion);
+
+                window.location.replace(url.toString());
+            }
+
+        } catch (error) {
+            console.log('M Learn AR update check:', error);
+        }
+    }
+
+    // ตรวจสอบทันทีหลังหน้าเว็บเริ่มทำงาน
+    checkForUpdate();
+
+})();
+</script>
+
+	
 </head>
 
 <body>
