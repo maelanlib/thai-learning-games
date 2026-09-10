@@ -2055,12 +2055,11 @@ function openFeedback() {
 
     const modal = document.getElementById("feedbackModal");
     const frame = document.getElementById("feedbackFrame");
-
-    // ใส่ลิงก์ Google Forms ตรงนี้
-    frame.src = "https://maelanlib.github.io/Evaluation-form-M-Learn-AR/";
-
+    // โหลดแบบประเมินเฉพาะครั้งแรก
+    if (frame.src === "about:blank" || frame.src === window.location.href) {
+        frame.src = "https://maelanlib.github.io/Evaluation-form-M-Learn-AR/";
+    }
     modal.classList.add("show");
-
     document.body.style.overflow = "hidden";
 }
 
@@ -2119,7 +2118,7 @@ document.addEventListener("keydown", function(event) {
 
         <iframe
             id="feedbackFrame"
-            src=""
+            src="about:blank"
             title="แบบสอบถามความพึงพอใจ">
         </iframe>
 
