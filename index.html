@@ -2055,11 +2055,17 @@ function openFeedback() {
 
     const modal = document.getElementById("feedbackModal");
     const frame = document.getElementById("feedbackFrame");
+
     // โหลดแบบประเมินเฉพาะครั้งแรก
-    if (frame.src === "about:blank" || frame.src === window.location.href) {
+    if (frame.dataset.loaded !== "true") {
+
         frame.src = "https://maelanlib.github.io/Evaluation-form-M-Learn-AR/";
+
+        frame.dataset.loaded = "true";
     }
+
     modal.classList.add("show");
+
     document.body.style.overflow = "hidden";
 }
 
@@ -2067,13 +2073,11 @@ function openFeedback() {
 function closeFeedback() {
 
     const modal = document.getElementById("feedbackModal");
-    const frame = document.getElementById("feedbackFrame");
 
     modal.classList.remove("show");
 
-    // ล้าง iframe เพื่อไม่ให้ฟอร์มค้างอยู่เบื้องหลัง
-    frame.src = "";
-
+    // ไม่ล้าง iframe
+    // เพื่อให้เปิดครั้งต่อไปได้ทันที
     document.body.style.overflow = "";
 }
 
