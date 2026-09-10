@@ -242,6 +242,43 @@
             transform: translateY(-1px);
         }
 
+
+
+.feedback-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    padding: 9px 16px;
+    border: none;
+    border-radius: 999px;
+
+    background: #eef2ff;
+    color: #4f46e5;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+    white-space: nowrap;
+
+    transition: .2s;
+}
+
+.feedback-btn:hover {
+    background: #e0e7ff;
+    transform: translateY(-1px);
+}
+
+
+
+
+
+
+
+
         /* =========================
            Hero
         ========================= */
@@ -842,6 +879,122 @@
                 font-size: 21px;
             }
         }
+		
+	/* =========================
+   Feedback Popup
+========================= */
+
+.feedback-modal {
+    position: fixed;
+    inset: 0;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(15, 23, 42, .72);
+
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+    z-index: 10000;
+}
+
+.feedback-modal.show {
+    display: flex;
+}
+
+.feedback-modal-content {
+    position: relative;
+
+    width: min(900px, 100%);
+    height: min(750px, 90vh);
+
+    background: white;
+    border-radius: 22px;
+
+    padding: 8px;
+
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.30);
+
+    overflow: hidden;
+}
+
+.feedback-modal-content iframe {
+    width: 100%;
+    height: 100%;
+
+    border: none;
+    border-radius: 16px;
+}
+
+.feedback-close {
+    position: absolute;
+
+    top: 10px;
+    right: 10px;
+
+    width: 38px;
+    height: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #ef4444;
+    color: white;
+
+    font-size: 24px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    z-index: 2;
+
+    box-shadow: 0 4px 15px rgba(0,0,0,.2);
+}
+
+.feedback-close:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+/* มือถือ */
+@media (max-width: 700px) {
+
+    .feedback-modal {
+        padding: 10px;
+    }
+
+    .feedback-modal-content {
+        width: 100%;
+        height: 92vh;
+
+        border-radius: 18px;
+        padding: 5px;
+    }
+
+    .feedback-modal-content iframe {
+        border-radius: 14px;
+    }
+
+    .feedback-close {
+        top: 8px;
+        right: 8px;
+
+        width: 36px;
+        height: 36px;
+
+        font-size: 22px;
+    }
+}	
+		
+		
     </style>
 
 
@@ -1148,7 +1301,9 @@
     </div>
 
     <div class="topbar-menu">
-
+		    <button class="feedback-btn" type="button" onclick="openFeedback()">
+            ❤️ ประเมินความพึงพอใจ
+			</button>
         <div class="visitor-counter">
             👀 ผู้เข้าชมทั้งหมด
             <strong id="visitor-count">กำลังโหลด...</strong>
@@ -1891,7 +2046,85 @@ document.addEventListener('keydown', function(event) {
 
     }
 
-</script>
 
+
+
+
+
+function openFeedback() {
+
+    const modal = document.getElementById("feedbackModal");
+    const frame = document.getElementById("feedbackFrame");
+
+    // ใส่ลิงก์ Google Forms ตรงนี้
+    frame.src = "https://maelanlib.github.io/Evaluation-form-M-Learn-AR/";
+
+    modal.classList.add("show");
+
+    document.body.style.overflow = "hidden";
+}
+
+
+function closeFeedback() {
+
+    const modal = document.getElementById("feedbackModal");
+    const frame = document.getElementById("feedbackFrame");
+
+    modal.classList.remove("show");
+
+    // ล้าง iframe เพื่อไม่ให้ฟอร์มค้างอยู่เบื้องหลัง
+    frame.src = "";
+
+    document.body.style.overflow = "";
+}
+
+
+// คลิกพื้นที่มืดด้านนอกเพื่อปิด
+document.getElementById("feedbackModal").addEventListener("click", function(event) {
+
+    if (event.target === this) {
+        closeFeedback();
+    }
+
+});
+
+
+// กด ESC เพื่อปิด
+document.addEventListener("keydown", function(event) {
+
+    if (event.key === "Escape") {
+        closeFeedback();
+    }
+
+});
+
+
+
+
+</script>
+<!-- =========================
+     Feedback Popup
+========================= -->
+
+<div id="feedbackModal" class="feedback-modal">
+
+    <div class="feedback-modal-content">
+
+        <button
+            type="button"
+            class="feedback-close"
+            onclick="closeFeedback()">
+            ×
+        </button>
+
+        <iframe
+            id="feedbackFrame"
+            src=""
+            title="แบบสอบถามความพึงพอใจ">
+        </iframe>
+
+    </div>
+
+</div>
 </body>
 </html>
