@@ -979,27 +979,77 @@ drawBoat() {
 
 
 
-      drawFishingLine() {
-        this.ctx.save();
-        // Line
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.hook.startX, this.hook.startY);
-        this.ctx.lineTo(this.hook.currX, this.hook.currY);
-        this.ctx.stroke();
+drawFishingLine() {
+    this.ctx.save();
 
-        // Hook
-        this.ctx.translate(this.hook.currX, this.hook.currY);
-        this.ctx.strokeStyle = '#94A3B8'; // Silver hook
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.arc(0, 10, 8, Math.PI, 0, true);
-        this.ctx.lineTo(8, 0);
-        this.ctx.stroke();
-        this.ctx.restore();
-      }
-    }
+    // =========================
+    // Rainbow Fishing Line
+    // =========================
+    const gradient = this.ctx.createLinearGradient(
+        this.hook.startX,
+        this.hook.startY,
+        this.hook.currX,
+        this.hook.currY
+    );
+
+    gradient.addColorStop(0.00, '#ff0000');
+    gradient.addColorStop(0.16, '#ff7a00');
+    gradient.addColorStop(0.33, '#ffff00');
+    gradient.addColorStop(0.50, '#00ff66');
+    gradient.addColorStop(0.66, '#00ccff');
+    gradient.addColorStop(0.83, '#3366ff');
+    gradient.addColorStop(1.00, '#cc33ff');
+
+    this.ctx.strokeStyle = gradient;
+    this.ctx.lineWidth = 2.5;
+    this.ctx.lineCap = 'round';
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.hook.startX, this.hook.startY);
+    this.ctx.lineTo(this.hook.currX, this.hook.currY);
+    this.ctx.stroke();
+
+    // =========================
+    // Hook
+    // =========================
+    this.ctx.translate(this.hook.currX, this.hook.currY);
+
+    this.ctx.strokeStyle = '#CBD5E1';
+    this.ctx.lineWidth = 2.5;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    this.ctx.beginPath();
+
+    // ก้านเบ็ด
+    this.ctx.moveTo(0, -2);
+    this.ctx.lineTo(0, 8);
+
+    // ส่วนโค้งของเบ็ด
+    this.ctx.bezierCurveTo(
+        0, 14,
+        4, 18,
+        8, 15
+    );
+
+    this.ctx.bezierCurveTo(
+        11, 13,
+        11, 9,
+        8, 6
+    );
+
+    this.ctx.stroke();
+
+    // ปลายตะขอ
+    this.ctx.beginPath();
+    this.ctx.moveTo(8, 6);
+    this.ctx.lineTo(6, 2);
+    this.ctx.lineTo(10, 5);
+    this.ctx.stroke();
+
+    this.ctx.restore();
+}
+}
 
     // Initialize game when window loads
     window.onload = () => {
