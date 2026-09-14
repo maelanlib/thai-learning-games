@@ -1,16 +1,21 @@
+<!-- ... existing code ... -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมคำไทยคู่ใจ - AR UI Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกมคำไทยคู่ใจ - AR & Touch UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         body {
             font-family: 'Prompt', sans-serif;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
             user-select: none;
+            -webkit-touch-callout: none; /* ป้องกันเมนูเมื่อแตะค้างบน iOS */
         }
         
         .progress-ring-circle {
@@ -19,93 +24,152 @@
             transform-origin: 50% 50%;
         }
 
-        .cursor-large {
-            cursor: pointer;
+        /* ป้องกันการไฮไลท์สีเวลากดปุ่มบนมือถือ */
+        .touch-action-none {
+            touch-action: none; 
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ปรับขนาดวงกลมให้เล็กลงในหน้าจอมือถือ */
+        @media (max-width: 768px) {
+            .ring-svg {
+                width: 176px; /* 160px (button) + 16px (stroke width) */
+                height: 176px;
+            }
+            .ring-circle {
+                r: 80; /* (160 / 2) */
+                cx: 88; /* 176 / 2 */
+                cy: 88;
+                stroke-dasharray: 502.65; /* 2 * PI * 80 */
+                stroke-dashoffset: 502.65;
+            }
+            .btn-circle {
+                width: 160px;
+                height: 160px;
+                font-size: 2rem;
+            }
+        }
+        /* ขนาดสำหรับ PC/Tablet */
+        @media (min-width: 769px) {
+            .ring-svg {
+                width: 246px; /* 230px (button) + 16px (stroke width) */
+                height: 246px;
+            }
+            .ring-circle {
+                r: 115; /* (230 / 2) */
+                cx: 123; /* 246 / 2 */
+                cy: 123;
+                stroke-dasharray: 722.56; /* 2 * PI * 115 */
+                stroke-dashoffset: 722.56;
+            }
+            .btn-circle {
+                width: 230px;
+                height: 230px;
+                font-size: 3rem;
+            }
         }
     </style>
 </head>
 <body class="overflow-hidden bg-slate-900 w-screen h-screen relative flex items-center justify-center">
 
-    <!-- ภาพพื้นหลัง AR -->
+    <!-- ภาพพื้นหลัง -->
     <div class="absolute inset-0 z-0">
         <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=2560&auto=format&fit=crop')] bg-cover bg-center filter blur-md transform scale-105"></div>
-        <div class="absolute inset-0 bg-stone-900/40"></div>
+        <div class="absolute inset-0 bg-stone-900/60"></div> <!-- เพิ่มความทึบของเลเยอร์มืดนิดหน่อยให้อ่านง่ายบนมือถือ -->
     </div>
 
     <!-- หน้าจอเริ่มเกม -->
-    <div id="start-screen" class="absolute inset-0 z-50 bg-stone-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white transition-opacity duration-500">
-        <h1 class="text-7xl font-bold mb-6 text-amber-100 drop-shadow-lg">คำไทยคู่ใจ</h1>
-        <p class="text-3xl mb-12 text-stone-200">จำลองระบบ AR Hand Tracking</p>
-        <button onclick="startGame()" class="px-12 py-5 bg-emerald-600 hover:bg-emerald-500 rounded-full text-4xl font-bold shadow-xl transition-all hover:scale-105 flex items-center gap-4">
+    <div id="start-screen" class="absolute inset-0 z-50 bg-stone-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white transition-opacity duration-500 p-4 text-center">
+        <h1 class="text-5xl md:text-7xl font-bold mb-4 md:mb-6 text-amber-100 drop-shadow-lg leading-tight">คำไทยคู่ใจ</h1>
+        <p class="text-xl md:text-3xl mb-8 md:mb-12 text-stone-200">เกมฝึกสมอง ประลองคำศัพท์</p>
+        <button onclick="startGame()" class="px-8 md:px-12 py-4 md:py-5 bg-emerald-600 hover:bg-emerald-500 rounded-full text-2xl md:text-4xl font-bold shadow-xl transition-all hover:scale-105 flex items-center gap-4">
             <i class="ph-fill ph-play-circle"></i> เริ่มเล่นเกม
         </button>
-        <p class="text-xl mt-8 text-stone-400 max-w-2xl text-center">เปิดเสียงเพื่อฟังดนตรีผ่อนคลาย<br>วิธีเล่น: เลื่อนเมาส์ <b>"วางค้างไว้"</b> บนปุ่มคำตอบจนวงแหวนเต็ม</p>
+        <p class="text-base md:text-xl mt-8 text-stone-300 max-w-2xl bg-stone-800/50 p-4 rounded-2xl">
+            <b>PC:</b> ใช้เมาส์ชี้ค้างบนปุ่มคำตอบ<br>
+            <b>มือถือ/แท็บเล็ต:</b> แตะค้างบนปุ่มจนวงแหวนเต็ม
+        </p>
     </div>
 
     <!-- UI หลักของเกม -->
-    <div id="game-ui" class="relative z-10 w-full max-w-7xl h-full flex flex-col justify-between p-8 opacity-0 pointer-events-none transition-opacity duration-500">
+    <div id="game-ui" class="relative z-10 w-full max-w-7xl h-full flex flex-col justify-between p-4 md:p-8 opacity-0 pointer-events-none transition-opacity duration-500">
         
         <!-- ส่วนบน: HUD -->
-        <div class="flex justify-between items-center w-full">
-            <div class="bg-stone-800/80 backdrop-blur-md px-8 py-4 rounded-3xl border border-stone-600/50 shadow-xl flex items-center gap-4 text-amber-300">
-                <i class="ph-fill ph-trophy text-5xl"></i>
-                <div class="text-4xl font-bold">คะแนน <span id="score-display">0</span></div>
+        <div class="flex justify-between items-center w-full mt-2 md:mt-0 gap-2">
+            <div class="bg-stone-800/80 backdrop-blur-md px-4 md:px-8 py-2 md:py-4 rounded-2xl md:rounded-3xl border border-stone-600/50 shadow-xl flex items-center gap-2 md:gap-4 text-amber-300 shrink-0">
+                <i class="ph-fill ph-trophy text-3xl md:text-5xl"></i>
+                <div class="text-xl md:text-4xl font-bold flex flex-col md:flex-row md:items-center md:gap-2">
+                    <span class="text-xs md:text-2xl text-stone-300">คะแนน</span> 
+                    <span id="score-display">0</span>
+                </div>
             </div>
 
-            <div class="flex items-center gap-6">
-                <button onclick="toggleMute()" class="bg-stone-800/80 backdrop-blur-md w-20 h-20 rounded-full border border-stone-600/50 shadow-xl flex items-center justify-center text-white hover:bg-stone-700 transition-colors text-4xl">
+            <div class="flex items-center gap-2 md:gap-6 shrink-0">
+                <button onclick="toggleMute()" class="bg-stone-800/80 backdrop-blur-md w-12 h-12 md:w-20 md:h-20 rounded-full border border-stone-600/50 shadow-xl flex items-center justify-center text-white hover:bg-stone-700 transition-colors text-2xl md:text-4xl touch-action-none">
                     <i id="sound-icon" class="ph-fill ph-speaker-high"></i>
                 </button>
-                <div class="bg-stone-800/80 backdrop-blur-md px-8 py-4 rounded-3xl border border-stone-600/50 shadow-xl flex items-center gap-4 text-white">
-                    <i class="ph-fill ph-timer text-5xl"></i>
-                    <div id="timer" class="text-4xl font-bold tracking-widest">03:00</div>
+                <div class="bg-stone-800/80 backdrop-blur-md px-4 md:px-8 py-2 md:py-4 rounded-2xl md:rounded-3xl border border-stone-600/50 shadow-xl flex items-center gap-2 md:gap-4 text-white">
+                    <i class="ph-fill ph-timer text-3xl md:text-5xl"></i>
+                    <div id="timer" class="text-xl md:text-4xl font-bold tracking-wider md:tracking-widest">03:00</div>
                 </div>
             </div>
         </div>
 
-        <!-- ส่วนกลาง: การ์ดคำถาม (ปรับขนาดให้เล็กลง) -->
-        <div class="flex-1 flex flex-col items-center justify-center">
-            <!-- ปรับขนาด max-w-4xl เป็น max-w-3xl และลด padding ลง -->
-            <div id="question-card" class="bg-stone-50/95 backdrop-blur-lg rounded-[2.5rem] shadow-2xl p-10 max-w-3xl w-full text-center border-4 border-white transition-transform duration-300 relative z-10">
-                <h2 id="question-text" class="text-5xl font-bold text-stone-800 mb-6 leading-tight">
+        <!-- ส่วนกลาง: การ์ดคำถาม -->
+        <div class="flex-1 flex flex-col items-center justify-center py-4 relative">
+            <div id="question-card" class="bg-stone-50/95 backdrop-blur-lg rounded-3xl md:rounded-[2.5rem] shadow-2xl p-6 md:p-10 w-full max-w-3xl text-center border-4 border-white transition-transform duration-300 relative z-10 flex flex-col justify-center min-h-[160px] md:min-h-[250px]">
+                <h2 id="question-text" class="text-3xl md:text-5xl font-bold text-stone-800 mb-2 md:mb-6 leading-tight">
                     โหลดคำถาม...
                 </h2>
-                <div class="text-2xl font-medium text-stone-500">
+                <div class="text-base md:text-2xl font-medium text-stone-500">
                     เลือกคำตอบที่ถูกต้อง
                 </div>
             </div>
 
             <!-- ข้อความตอบกลับ -->
-            <div id="feedback" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-5xl font-bold opacity-0 transition-opacity duration-300 bg-white/95 px-12 py-8 rounded-3xl shadow-2xl border-4 z-50 pointer-events-none">
+            <div id="feedback" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl md:text-5xl font-bold opacity-0 transition-opacity duration-300 bg-white/95 px-6 md:px-12 py-4 md:py-8 rounded-2xl md:rounded-3xl shadow-2xl border-4 z-50 pointer-events-none whitespace-nowrap">
                 ✓ ถูกต้อง! +10 คะแนน
             </div>
         </div>
 
         <!-- ส่วนล่าง: ปุ่มคำตอบ -->
-        <div class="flex justify-between items-center w-full px-24 pb-8">
+        <!-- ใช้ flex-col สำหรับมือถือ (ปุ่มอยู่บน-ล่าง) และ flex-row สำหรับ PC (ปุ่มซ้าย-ขวา) -->
+        <div class="flex flex-col md:flex-row justify-center md:justify-between items-center w-full gap-4 md:gap-0 px-2 md:px-24 pb-4 md:pb-8">
             
-            <div class="relative flex items-center justify-center w-[280px] h-[280px]" 
-                 onmouseenter="startDwell('left')" 
-                 onmouseleave="cancelDwell('left')">
-                <svg class="absolute inset-0 w-full h-full pointer-events-none drop-shadow-lg" viewBox="0 0 300 300">
-                    <circle cx="150" cy="150" r="135" stroke="rgba(255, 255, 255, 0.2)" stroke-width="16" fill="none" />
-                    <!-- เปลี่ยนเป็นสีฟ้ากลางๆ -->
-                    <circle id="ring-left" class="progress-ring-circle" cx="150" cy="150" r="135" stroke="#38bdf8" stroke-width="16" fill="none" stroke-linecap="round" stroke-dasharray="848.23" stroke-dashoffset="848.23" />
+            <!-- ปุ่ม 1 (ซ้าย/บน) -->
+            <div class="relative flex items-center justify-center touch-action-none w-[176px] h-[176px] md:w-[246px] md:h-[246px]" 
+                 onmouseenter="startInteraction('left')" 
+                 onmouseleave="cancelInteraction('left')"
+                 ontouchstart="handleTouchStart(event, 'left')"
+                 ontouchend="handleTouchEnd('left')"
+                 ontouchcancel="handleTouchEnd('left')"
+                 oncontextmenu="event.preventDefault();"> <!-- ป้องกันเมนูคลิกขวาเวลาแตะค้าง -->
+                <svg class="absolute inset-0 pointer-events-none drop-shadow-lg ring-svg" preserveAspectRatio="xMidYMid meet">
+                    <!-- วงแหวนพื้นหลัง -->
+                    <circle class="ring-circle" stroke="rgba(255, 255, 255, 0.2)" stroke-width="16" fill="none" />
+                    <!-- วงแหวนความคืบหน้า -->
+                    <circle id="ring-left" class="progress-ring-circle ring-circle" stroke="#38bdf8" stroke-width="16" fill="none" stroke-linecap="round" />
                 </svg>
-                <button id="btn-left" class="cursor-large w-[230px] h-[230px] rounded-full bg-white text-stone-800 text-5xl font-bold shadow-2xl hover:bg-stone-50 transition-colors z-10 flex items-center justify-center border-4 border-stone-200">
+                <button id="btn-left" class="btn-circle rounded-full bg-white text-stone-800 font-bold shadow-xl hover:bg-stone-50 transition-colors z-10 flex items-center justify-center border-4 border-stone-200 cursor-pointer pointer-events-none absolute">
                     ตัวเลือก 1
                 </button>
             </div>
 
-            <div class="relative flex items-center justify-center w-[280px] h-[280px]" 
-                 onmouseenter="startDwell('right')" 
-                 onmouseleave="cancelDwell('right')">
-                <svg class="absolute inset-0 w-full h-full pointer-events-none drop-shadow-lg" viewBox="0 0 300 300">
-                    <circle cx="150" cy="150" r="135" stroke="rgba(255, 255, 255, 0.2)" stroke-width="16" fill="none" />
-                    <!-- เปลี่ยนเป็นสีฟ้ากลางๆ -->
-                    <circle id="ring-right" class="progress-ring-circle" cx="150" cy="150" r="135" stroke="#38bdf8" stroke-width="16" fill="none" stroke-linecap="round" stroke-dasharray="848.23" stroke-dashoffset="848.23" />
+            <!-- ปุ่ม 2 (ขวา/ล่าง) -->
+            <div class="relative flex items-center justify-center touch-action-none w-[176px] h-[176px] md:w-[246px] md:h-[246px]" 
+                 onmouseenter="startInteraction('right')" 
+                 onmouseleave="cancelInteraction('right')"
+                 ontouchstart="handleTouchStart(event, 'right')"
+                 ontouchend="handleTouchEnd('right')"
+                 ontouchcancel="handleTouchEnd('right')"
+                 oncontextmenu="event.preventDefault();">
+                <svg class="absolute inset-0 pointer-events-none drop-shadow-lg ring-svg" preserveAspectRatio="xMidYMid meet">
+                    <!-- วงแหวนพื้นหลัง -->
+                    <circle class="ring-circle" stroke="rgba(255, 255, 255, 0.2)" stroke-width="16" fill="none" />
+                    <!-- วงแหวนความคืบหน้า -->
+                    <circle id="ring-right" class="progress-ring-circle ring-circle" stroke="#38bdf8" stroke-width="16" fill="none" stroke-linecap="round" />
                 </svg>
-                <button id="btn-right" class="cursor-large w-[230px] h-[230px] rounded-full bg-white text-stone-800 text-5xl font-bold shadow-2xl hover:bg-stone-50 transition-colors z-10 flex items-center justify-center border-4 border-stone-200">
+                <button id="btn-right" class="btn-circle rounded-full bg-white text-stone-800 font-bold shadow-xl hover:bg-stone-50 transition-colors z-10 flex items-center justify-center border-4 border-stone-200 cursor-pointer pointer-events-none absolute">
                     ตัวเลือก 2
                 </button>
             </div>
@@ -114,7 +178,7 @@
     </div>
 
     <script>
-        // --- ฐานข้อมูลคำถาม ---
+        // --- ฐานข้อมูลคำถาม (คงเดิม) ---
         const questionDatabase = [
             { text: "คำว่า <span class='text-amber-600'>‘โกรธ’</span><br>มีความหมายเหมือนกับคำใด?", correct: "โมโห", wrong: "ดีใจ" },
             { text: "คำว่า <span class='text-amber-600'>‘รับประทาน’</span><br>มีความหมายเหมือนกับคำใด?", correct: "กิน", wrong: "นอนหลับ" },
@@ -140,17 +204,14 @@
 
         let currentQuestionList = [];
         let correctSide = 'left';
-
-        // --- Game State ---
         let score = 0;
-        let timeLeft = 180; // 3 นาที
+        let timeLeft = 180;
         let gameTimerId = null;
         let isMuted = false;
         let isAnswered = false;
 
         // --- Audio System (Web Audio API) ---
         let audioCtx;
-        
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -160,20 +221,16 @@
             }
         }
 
-        // --- ระบบ BGM ผ่อนคลาย (Generative Ambient) ---
-        // ใช้ Pentatonic Scale เพื่อให้เสียงฟังดูไพเราะและผ่อนคลายเสมอ
-        const pentatonicScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25]; // C, D, E, G, A, C
-        
+        const pentatonicScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
         function playAmbientNote() {
             if(isMuted || !audioCtx) return;
             const freq = pentatonicScale[Math.floor(Math.random() * pentatonicScale.length)];
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
-            osc.type = 'sine'; // เสียงนุ่มนวลเหมือนกระดิ่งลม/แก้ว
+            osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-            // ค่อยๆ ดังขึ้นและค่อยๆ เบาลง (Fade in / Fade out ช้าๆ)
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
             gain.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 1.5); 
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 6);
@@ -186,14 +243,12 @@
         }
 
         function startAmbientBGM() {
-            // เล่นโน้ตแบบสุ่มเป็นระยะๆ เพื่อสร้างบรรยากาศ
             setInterval(() => { if(!isMuted) playAmbientNote(); }, 3500);
             setTimeout(() => {
                 setInterval(() => { if(!isMuted) playAmbientNote(); }, 5000);
             }, 1500);
         }
 
-        // --- Sound Effects ---
         function playTone(freq, type, duration, vol = 0.1) {
             if(isMuted || !audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -212,22 +267,18 @@
             osc.stop(audioCtx.currentTime + duration);
         }
 
-        function playHoverSound() {
-            playTone(400, 'sine', 0.1, 0.02);
-        }
-
+        function playHoverSound() { playTone(400, 'sine', 0.1, 0.02); }
         function playCorrectSound() {
             playTone(523.25, 'sine', 0.1, 0.05);
             setTimeout(() => playTone(659.25, 'sine', 0.1, 0.05), 100);
             setTimeout(() => playTone(783.99, 'sine', 0.3, 0.08), 200);
         }
-
         function playWrongSound() {
             playTone(200, 'triangle', 0.3, 0.05);
             setTimeout(() => playTone(180, 'triangle', 0.4, 0.05), 150);
         }
 
-        // --- Logic เกม ---
+        // --- Logic เกมพื้นฐาน ---
         function shuffleArray(array) {
             let curId = array.length;
             while (0 !== curId) {
@@ -242,14 +293,12 @@
 
         function loadNextQuestion() {
             if(currentQuestionList.length === 0) {
-                // ถ้าคำถามหมด ให้สุ่มชุดใหม่มาเล่นซ้ำ
                 currentQuestionList = shuffleArray([...questionDatabase]);
             }
             
             const qData = currentQuestionList.pop();
             document.getElementById('question-text').innerHTML = qData.text;
 
-            // สุ่มตำแหน่งคำตอบถูก
             if(Math.random() > 0.5) {
                 correctSide = 'left';
                 document.getElementById('btn-left').innerText = qData.correct;
@@ -269,8 +318,12 @@
 
         function startGame() {
             initAudio();
-            startAmbientBGM(); // เริ่มเล่นเพลง
+            startAmbientBGM(); 
             
+            // เตรียมความพร้อมเรื่องวงแหวนตามขนาดจอตั้งแต่เริ่ม
+            updateCircumference();
+            window.addEventListener('resize', updateCircumference);
+
             currentQuestionList = shuffleArray([...questionDatabase]);
             loadNextQuestion();
 
@@ -305,23 +358,40 @@
             }
         }
 
-        // --- AR Dwell-to-Click Interaction ---
-        const DWELL_TIME_MS = 1200; // ลดเวลาเหลือ 1.2 วินาทีให้ไวขึ้นนิดนึง
+        // --- Interaction Logic (Hover & Touch) ---
+        const DWELL_TIME_MS = 1200; 
         const FPS = 60;
-        const CIRCUMFERENCE = 848.23; 
-        
+        let CIRCUMFERENCE = 722.56; // ค่าเริ่มต้นของ PC (2 * PI * 115)
+
+        // คำนวณเส้นรอบวงใหม่เมื่อขนาดจอเปลี่ยน (Responsive Ring)
+        function updateCircumference() {
+            const isMobile = window.innerWidth <= 768;
+            const radius = isMobile ? 80 : 115;
+            CIRCUMFERENCE = 2 * Math.PI * radius;
+            
+            // เซ็ตค่าตั้งต้นของวงแหวนให้ว่างเปล่า
+            setRingProgress('left', currentProgress['left']);
+            setRingProgress('right', currentProgress['right']);
+        }
+
         let dwellIntervals = { left: null, right: null };
         let currentProgress = { left: 0, right: 0 };
         const incrementPerFrame = 100 / (DWELL_TIME_MS / (1000 / FPS));
+        
+        // ตัวแปรป้องกันการทำงานซ้ำซ้อนระหว่าง Touch และ Mouse
+        let isTouching = false; 
 
         function setRingProgress(side, percent) {
             const ring = document.getElementById(`ring-${side}`);
             if(!ring) return;
-            const offset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE;
+            // คำนวณความยาวที่ต้องซ่อนไว้ (100% คือ offset = 0, 0% คือ offset = CIRCUMFERENCE)
+            const offset = Math.max(0, CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE);
             ring.style.strokeDashoffset = offset;
+            ring.style.strokeDasharray = CIRCUMFERENCE;
         }
 
-        function startDwell(side) {
+        // รวมฟังก์ชันเริ่ม interaction สำหรับทั้งเมาส์และนิ้ว
+        function startInteraction(side) {
             if(isAnswered) return;
             playHoverSound();
             if(dwellIntervals[side]) clearInterval(dwellIntervals[side]);
@@ -336,15 +406,19 @@
                 setRingProgress(side, currentProgress[side]);
             }, 1000 / FPS);
             
-            document.getElementById(`btn-${side}`).style.transform = 'scale(1.05)';
+            // เอฟเฟกต์ปุ่มขยายตัวเวลากด/ชี้
+            const btn = document.getElementById(`btn-${side}`);
+            btn.style.transform = 'scale(1.05)';
+            btn.style.borderColor = '#38bdf8'; // เปลี่ยนสีขอบให้รู้ว่ากำลังกด
         }
 
-        function cancelDwell(side) {
+        // รวมฟังก์ชันยกเลิก interaction
+        function cancelInteraction(side) {
             if(isAnswered) return;
             if(dwellIntervals[side]) clearInterval(dwellIntervals[side]);
             
             dwellIntervals[side] = setInterval(() => {
-                currentProgress[side] -= incrementPerFrame * 2; 
+                currentProgress[side] -= incrementPerFrame * 2; // ลดแถบไวขึ้น
                 if(currentProgress[side] <= 0) {
                     currentProgress[side] = 0;
                     clearInterval(dwellIntervals[side]);
@@ -352,7 +426,24 @@
                 setRingProgress(side, currentProgress[side]);
             }, 1000 / FPS);
             
-            document.getElementById(`btn-${side}`).style.transform = 'scale(1)';
+            // คืนค่าเอฟเฟกต์ปุ่ม
+            const btn = document.getElementById(`btn-${side}`);
+            btn.style.transform = 'scale(1)';
+            btn.style.borderColor = '#e5e7eb'; // สีขอบเดิม (stone-200)
+        }
+
+        // Event Handlers สำหรับ Touch (มือถือ)
+        function handleTouchStart(event, side) {
+            event.preventDefault(); // ป้องกันการทำงานซ้อนกับเมาส์และพฤติกรรมแปลกๆ บนมือถือ
+            isTouching = true;
+            startInteraction(side);
+        }
+
+        function handleTouchEnd(side) {
+            if (isTouching) {
+                cancelInteraction(side);
+                isTouching = false;
+            }
         }
 
         function submitAnswer(side) {
@@ -361,9 +452,8 @@
             const questionCard = document.getElementById('question-card');
             
             const otherSide = side === 'left' ? 'right' : 'left';
-            cancelDwell(otherSide);
+            cancelInteraction(otherSide);
 
-            // ตรวจสอบคำตอบ
             if(side === correctSide) {
                 playCorrectSound();
                 score += 10;
@@ -373,14 +463,14 @@
                 setTimeout(() => scoreDisplay.classList.remove('text-emerald-400', 'scale-125'), 500);
 
                 feedback.innerText = '✓ ถูกต้อง! +10 คะแนน';
-                feedback.className = "absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-5xl font-bold opacity-0 transition-opacity duration-300 bg-white/95 px-12 py-8 rounded-3xl shadow-2xl border-4 z-50 pointer-events-none text-emerald-500 border-emerald-400";
+                feedback.className = "absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl md:text-5xl font-bold opacity-0 transition-opacity duration-300 bg-white/95 px-6 md:px-12 py-4 md:py-8 rounded-2xl md:rounded-3xl shadow-2xl border-4 z-50 pointer-events-none whitespace-nowrap text-emerald-500 border-emerald-400";
                 
                 questionCard.style.transform = 'scale(0.95)';
                 questionCard.style.opacity = '0.5';
             } else {
                 playWrongSound();
                 feedback.innerText = '✗ ยังไม่ใช่ครับ ลองใหม่นะ';
-                feedback.className = "absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-5xl font-bold opacity-0 transition-opacity duration-300 bg-white/95 px-12 py-8 rounded-3xl shadow-2xl border-4 z-50 pointer-events-none text-rose-500 border-rose-400";
+                feedback.className = "absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl md:text-5xl font-bold opacity-0 transition-opacity duration-300 bg-white/95 px-6 md:px-12 py-4 md:py-8 rounded-2xl md:rounded-3xl shadow-2xl border-4 z-50 pointer-events-none whitespace-nowrap text-rose-500 border-rose-400";
                 
                 questionCard.classList.add('animate-pulse');
                 setTimeout(() => questionCard.classList.remove('animate-pulse'), 1000);
@@ -388,7 +478,7 @@
 
             feedback.style.opacity = '1';
             
-            // เปลี่ยนข้อถัดไปหลังจากแสดงผล 1.8 วินาที
+            // รีเซ็ตเพื่อเตรียมข้อถัดไป
             setTimeout(() => {
                 feedback.style.opacity = '0';
                 questionCard.style.transform = 'scale(1)';
@@ -398,10 +488,15 @@
                 currentProgress['right'] = 0;
                 setRingProgress('left', 0);
                 setRingProgress('right', 0);
-                document.getElementById('btn-left').style.transform = 'scale(1)';
-                document.getElementById('btn-right').style.transform = 'scale(1)';
                 
-                loadNextQuestion(); // โหลดคำถามใหม่
+                const btnL = document.getElementById('btn-left');
+                const btnR = document.getElementById('btn-right');
+                btnL.style.transform = 'scale(1)';
+                btnR.style.transform = 'scale(1)';
+                btnL.style.borderColor = '#e5e7eb';
+                btnR.style.borderColor = '#e5e7eb';
+                
+                loadNextQuestion(); 
                 isAnswered = false; 
             }, 1800);
         }
