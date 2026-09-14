@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>เกมล่าคำไทย (Thai Word Hunter) - Sponge Theme</title>
+    <title>เกมล่าคำไทย (Thai Word Hunter) - AR Sponge Theme</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&family=Mitr:wght@400;600;800&display=swap" rel="stylesheet">
     
+    <!-- MediaPipe สำหรับระบบ AR Tracking มือ -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
     <style>
         body {
             font-family: 'Sarabun', sans-serif;
@@ -16,6 +20,36 @@
             background: linear-gradient(180deg, #38BDF8 0%, #BAE6FD 100%);
             touch-action: none;
             user-select: none;
+            transition: background 0.5s;
+        }
+
+        /* เมื่อเปิดโหมด AR จะทำให้พื้นหลังโปร่งใสเพื่อเห็นกล้อง */
+        body.ar-active {
+            background: transparent;
+        }
+        body.ar-active .cloud {
+            display: none;
+        }
+        body.ar-active .top-section {
+            background: linear-gradient(to bottom, rgba(255,255,255, 0.8), transparent);
+        }
+        body.ar-active .bottom-section {
+            background: linear-gradient(to top, rgba(255,255,255, 0.8) 0%, transparent 100%);
+        }
+
+        #webcam-video {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            object-fit: cover;
+            transform: scaleX(-1); /* กลับซ้ายขวาให้เหมือนกระจก */
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        #webcam-video.active {
+            opacity: 1;
         }
 
         h1, h2, h3, .heading-font {
@@ -70,6 +104,7 @@
             gap: 0.5rem;
             pointer-events: auto;
             background: linear-gradient(to bottom, rgba(56, 189, 248, 0.9), transparent);
+            transition: background 0.5s;
         }
 
         .stats-bar {
@@ -118,6 +153,7 @@
             gap: 1rem;
             pointer-events: auto;
             background: linear-gradient(to top, rgba(186, 230, 253, 0.9) 0%, transparent 100%);
+            transition: background 0.5s;
         }
 
         #target-word-display {
@@ -143,7 +179,7 @@
         }
 
         .word-slot.empty {
-            background: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.7);
             border: 4px dashed #93C5FD;
             color: transparent;
             box-shadow: none;
@@ -159,8 +195,8 @@
         .floating-letter {
             position: absolute;
             width: 80px; height: 80px;
-            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(200, 240, 255, 0.6) 40%, rgba(255, 200, 255, 0.4) 80%);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(200, 240, 255, 0.8) 40%, rgba(255, 200, 255, 0.6) 80%);
+            border: 2px solid rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             font-size: 2.5rem;
@@ -171,11 +207,18 @@
                 inset 0 0 20px rgba(255, 255, 255, 0.8),
                 inset 10px 0 20px rgba(255, 255, 255, 0.4),
                 inset -10px -10px 20px rgba(100, 200, 255, 0.3),
-                0 6px 12px rgba(0,0,0,0.1);
+                0 6px 12px rgba(0,0,0,0.15);
             cursor: pointer;
             animation: floatBubble 5s ease-in-out infinite;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(4px);
             touch-action: none;
+        }
+
+        .floating-letter.grabbed {
+            animation: none !important;
+            transform: scale(1.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            z-index: 1000 !important;
         }
 
         .floating-letter::after {
@@ -257,30 +300,63 @@
             background: #FDE047;
             color: #92400E;
             font-family: 'Mitr', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 800;
-            padding: 1rem 3rem;
+            padding: 1rem 2rem;
             border-radius: 9999px;
             border: 5px solid #B45309;
             cursor: pointer;
             box-shadow: 0 8px 0 #92400E;
             transition: all 0.1s;
-            margin-top: 2rem;
+            margin-top: 1.5rem;
             text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+            width: 100%;
         }
 
         .btn-sponge:active {
             transform: translateY(8px);
             box-shadow: 0 0 0 #92400E;
         }
+        
+        .btn-sponge:disabled {
+            background: #D1D5DB;
+            border-color: #6B7280;
+            color: #4B5563;
+            box-shadow: 0 8px 0 #4B5563;
+            cursor: not-allowed;
+        }
 
         #confetti-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 40;
         }
+
+        /* เป้าชี้ตำแหน่งมือ AR */
+        #hand-cursor {
+            position: absolute;
+            width: 30px; height: 30px;
+            background: rgba(59, 130, 246, 0.6); /* สีฟ้าใส */
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10000;
+            display: none; /* ซ่อนไว้ก่อนจนกว่าจะเจอมือ */
+            transition: transform 0.1s ease-out, background 0.1s ease-out;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        #hand-cursor.pinching {
+            transform: translate(-50%, -50%) scale(0.6);
+            background: rgba(16, 185, 129, 0.9); /* เปลี่ยนเป็นสีเขียวเมื่อจีบนิ้ว */
+            border-color: #FDE047;
+        }
+
     </style>
 </head>
 <body>
+    <video id="webcam-video" autoplay playsinline></video>
+    <div id="hand-cursor"></div>
 
     <div id="game-container">
         <div class="cloud cloud1"></div>
@@ -310,14 +386,16 @@
         </div>
 
         <div id="start-screen" class="overlay-screen">
-            <div class="sponge-panel p-8 max-w-sm mx-4">
+            <div class="sponge-panel p-6 max-w-sm mx-4">
                 <h1 class="text-5xl heading-font text-yellow-600 mb-4 tracking-wide" style="text-shadow: 2px 2px 0px white, -1px -1px 0px white;">เกมล่าคำไทย</h1>
-                <p class="text-base font-semibold text-blue-900">
-                    ✨ แตะหรือลากฟองสบู่เพื่อเลือกคำตอบ<br>
-                    ✨ <strong class="text-blue-700">จีบนิ้ว 2 ครั้งเร็วๆ</strong> บนฟองสบู่เพื่อเลือกแบบ AR<br><br>
-                    หาตัวอักษรให้ถูกต้องตามลำดับในเวลา 1 นาที!
+                <p class="text-sm font-semibold text-blue-900 text-left bg-white bg-opacity-60 p-3 rounded-xl">
+                    📸 <strong>เปิดกล้องเพื่อเล่นระบบ AR!</strong><br>
+                    ✨ <strong>จีบนิ้ว</strong> กลางอากาศเพื่อลากฟองสบู่<br>
+                    ✨ <strong>จีบนิ้ว 2 ครั้งเร็วๆ</strong> เพื่อเลือกคำตอบ<br>
+                    (หรือแตะ/ลาก บนหน้าจอแบบปกติก็ได้)
                 </p>
-                <button id="start-btn" class="btn-sponge">เริ่มเล่นเลย!</button>
+                <button id="start-btn" class="btn-sponge">เริ่มเล่นโหมด AR!</button>
+                <button id="start-normal-btn" class="btn-sponge !mt-2 !text-sm !py-3" style="background:#fff; color:#3B82F6; border-color:#60A5FA; box-shadow: 0 6px 0 #60A5FA;">เล่นโหมดปกติ (ไม่เปิดกล้อง)</button>
             </div>
         </div>
 
@@ -340,7 +418,7 @@
             { word: "ครอบครัว", hint: "กลุ่มคนที่มีความสัมพันธ์กันทางสายเลือด" },
             { word: "ความสุข", hint: "ความรู้สึกดีใจ อิ่มเอมใจ" },
             { word: "โรงเรียน", hint: "สถานที่สำหรับศึกษาเล่าเรียน" },
-            { word: "ฟองน้ำ", hint: "ของใช้นุ่มนิ่ม ซับน้ำได้ดี หรือตัวการ์ตูนสีเหลือง" },
+            { word: "ฟองน้ำ", hint: "ของใช้นุ่มนิ่ม ซับน้ำได้ดี หรือตัวการ์ตูน" },
             { word: "ทะเล", hint: "แหล่งน้ำเค็มขนาดใหญ่" },
             { word: "น่ารัก", hint: "ดูดี ถูกใจ น่าเอ็นดู" },
             { word: "รอยยิ้ม", hint: "อาการที่แสดงความสุขบนใบหน้า" }
@@ -356,9 +434,15 @@
         let timeLeft = 60;
         let gameInterval;
         let isPlaying = false;
+        let arModeActive = false;
+
+        // AR & Gesture State
+        let isPinching = false;
+        let grabbedElement = null;
+        let lastPinchTime = 0;
+        let lastGrabbedElement = null;
 
         const arWorld = document.getElementById('ar-world');
-        const playArea = document.getElementById('play-area');
         const scoreDisplay = document.getElementById('score');
         const timerDisplay = document.getElementById('timer');
         const targetWordDisplay = document.getElementById('target-word-display');
@@ -367,36 +451,166 @@
         const startScreen = document.getElementById('start-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
         const finalScoreDisplay = document.getElementById('final-score');
+        
         const startBtn = document.getElementById('start-btn');
+        const startNormalBtn = document.getElementById('start-normal-btn');
         const restartBtn = document.getElementById('restart-btn');
+        const videoElement = document.getElementById('webcam-video');
+        const handCursor = document.getElementById('hand-cursor');
 
         function initGame() {
-            startBtn.addEventListener('click', startGame);
-            restartBtn.addEventListener('click', startGame);
-            setupParallax();
+            startBtn.addEventListener('click', () => startARGame());
+            startNormalBtn.addEventListener('click', () => startGame(false));
+            restartBtn.addEventListener('click', () => startGame(arModeActive));
         }
 
-        function setupParallax() {
-            document.addEventListener('mousemove', (e) => {
-                if(!isPlaying) return;
-                const x = (window.innerWidth / 2 - e.pageX) / 35;
-                const y = (window.innerHeight / 2 - e.pageY) / 35;
-                arWorld.style.transform = `translate(${x}px, ${y}px)`;
-            });
+        // --- AR Camera & MediaPipe Logic ---
+        async function startARGame() {
+            startBtn.textContent = 'กำลังเตรียมกล้อง...';
+            startBtn.disabled = true;
+            startNormalBtn.style.display = 'none';
 
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', (e) => {
-                    if(!isPlaying) return;
-                    let tiltX = e.gamma ? Math.min(Math.max(e.gamma, -45), 45) : 0; 
-                    let tiltY = e.beta ? Math.min(Math.max(e.beta - 45, -45), 45) : 0;
-                    arWorld.style.transform = `translate(${tiltX * 2.5}px, ${tiltY * 2.5}px)`;
+            try {
+                const hands = new Hands({locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }});
+                
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.65,
+                    minTrackingConfidence: 0.65
                 });
+                
+                hands.onResults(onARResults);
+
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await hands.send({image: videoElement});
+                    },
+                    width: 640,
+                    height: 480
+                });
+                
+                await camera.start();
+                startGame(true);
+            } catch (error) {
+                console.error("Camera Error:", error);
+                alert("ไม่สามารถเปิดกล้องได้ จะเปลี่ยนเป็นโหมดปกติแทนครับ");
+                startGame(false);
             }
         }
 
-        function startGame() {
+        function onARResults(results) {
+            if (!isPlaying) return;
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // จุดที่ 8 คือปลายนิ้วชี้, จุดที่ 4 คือปลายนิ้วโป้ง
+                const indexTip = landmarks[8];
+                const thumbTip = landmarks[4];
+
+                // แปลงพิกัดจากกล้องเป็นหน้าจอ (คูณด้วยขนาดจอ และกลับแกน X เพราะกล้องสะท้อน)
+                const screenW = window.innerWidth;
+                const screenH = window.innerHeight;
+                const handX = (1 - indexTip.x) * screenW;
+                const handY = indexTip.y * screenH;
+
+                // อัปเดตตำแหน่งเป้าสายตา
+                handCursor.style.left = `${handX}px`;
+                handCursor.style.top = `${handY}px`;
+                handCursor.style.display = 'block';
+
+                // คำนวณระยะห่างระหว่างนิ้วชี้และนิ้วโป้ง (เพื่อตรวจจับการจีบ)
+                const dx = indexTip.x - thumbTip.x;
+                const dy = indexTip.y - thumbTip.y;
+                const dz = indexTip.z - thumbTip.z;
+                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                
+                const pinchThreshold = 0.055; // ปรับความอ่อนไหวของการจีบ
+                const currentlyPinching = distance < pinchThreshold;
+
+                if (currentlyPinching && !isPinching) {
+                    // เริ่มจีบนิ้ว
+                    isPinching = true;
+                    handCursor.classList.add('pinching');
+                    handlePinchStart(handX, handY);
+                } else if (!currentlyPinching && isPinching) {
+                    // ปล่อยนิ้ว
+                    isPinching = false;
+                    handCursor.classList.remove('pinching');
+                    handlePinchEnd();
+                }
+
+                // ถ้ากำลังจีบและจับฟองน้ำอยู่ ให้เลื่อนฟองน้ำตามมือ
+                if (isPinching && grabbedElement) {
+                    grabbedElement.style.left = `${handX - 40}px`; // -40 เพื่อให้อยู่ตรงกลางฟอง
+                    grabbedElement.style.top = `${handY - 40}px`;
+                }
+
+            } else {
+                // ไม่เจอมือ
+                handCursor.style.display = 'none';
+                if (isPinching) {
+                    isPinching = false;
+                    handCursor.classList.remove('pinching');
+                    handlePinchEnd();
+                }
+            }
+        }
+
+        function handlePinchStart(x, y) {
+            // ค้นหาฟองน้ำที่อยู่ใต้เคอร์เซอร์
+            const elements = document.elementsFromPoint(x, y);
+            const bubble = elements.find(el => el.classList.contains('floating-letter'));
+
+            if (bubble) {
+                grabbedElement = bubble;
+                grabbedElement.classList.add('grabbed');
+
+                const now = Date.now();
+                // ตรวจสอบ Double Pinch (จีบ 2 ครั้งติดกันใน 450ms บนฟองเดิม)
+                if (now - lastPinchTime < 450 && lastGrabbedElement === grabbedElement) {
+                    // จีบ 2 ครั้ง -> เลือกคำตอบ!
+                    const char = grabbedElement.textContent;
+                    playPopSound();
+                    
+                    const rect = grabbedElement.getBoundingClientRect();
+                    showFloatingText('✨ เลือก!', rect.left, rect.top - 20, '#3B82F6');
+                    
+                    checkLetter(char, grabbedElement);
+                    grabbedElement.classList.remove('grabbed');
+                    grabbedElement = null; // ปล่อย
+                    lastPinchTime = 0; // รีเซ็ตเวลา
+                } else {
+                    // จีบครั้งแรก -> บันทึกเวลาและเตรียมลาก
+                    lastPinchTime = now;
+                    lastGrabbedElement = grabbedElement;
+                }
+            }
+        }
+
+        function handlePinchEnd() {
+            if (grabbedElement) {
+                grabbedElement.classList.remove('grabbed');
+                grabbedElement = null;
+            }
+        }
+
+        // --- Game Flow ---
+        function startGame(useAR) {
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
+            
+            arModeActive = useAR;
+            if (arModeActive) {
+                document.body.classList.add('ar-active');
+                videoElement.classList.add('active');
+            } else {
+                document.body.classList.remove('ar-active');
+                videoElement.classList.remove('active');
+            }
             
             score = 0;
             timeLeft = 60;
@@ -421,6 +635,12 @@
             
             const letters = document.querySelectorAll('.floating-letter');
             letters.forEach(l => l.style.animationPlayState = 'paused');
+
+            // Reset start buttons state
+            startBtn.textContent = 'เริ่มเล่นโหมด AR อีกครั้ง';
+            startBtn.disabled = false;
+            startNormalBtn.style.display = 'block';
+            handCursor.style.display = 'none';
         }
 
         function updateTimer() {
@@ -449,7 +669,7 @@
             
             targetWord.forEach(char => spawnSpecificLetter(char));
             
-            const extraBubblesCount = 10;
+            const extraBubblesCount = 8; // ลดจำนวนฟองหลอกลงนิดหน่อยให้ลากง่ายขึ้น
             for(let i=0; i < extraBubblesCount; i++) {
                 spawnSpecificLetter(getRandomThaiChar());
             }
@@ -493,14 +713,14 @@
             letterEl.style.top = `${y}px`;
             letterEl.style.animationDelay = `${Math.random() * 2}s`;
             
+            // --- Fallback สำหรับแตะและลากด้วยเมาส์/นิ้ว (Touch Screen) ---
             let moved = false;
             let startX, startY;
             let initialLeft, initialTop;
-            let lastTapTime = 0;
-            let isARMoving = false; // สถานะกำลังลากแบบ AR
+            let lastTouchTapTime = 0;
 
             letterEl.addEventListener('pointerdown', (e) => {
-                if(letterEl.classList.contains('popping')) return;
+                if(letterEl.classList.contains('popping') || arModeActive) return; // ถ้าใช้กล้องให้ใช้มือลากแทน
                 moved = false;
                 startX = e.clientX;
                 startY = e.clientY;
@@ -508,8 +728,7 @@
                 initialTop = parseFloat(letterEl.style.top) || y;
                 
                 letterEl.setPointerCapture(e.pointerId);
-                letterEl.style.animation = 'none';
-                letterEl.style.zIndex = '100';
+                letterEl.classList.add('grabbed');
             });
 
             letterEl.addEventListener('pointermove', (e) => {
@@ -518,12 +737,9 @@
                 let dx = e.clientX - startX;
                 let dy = e.clientY - startY;
                 
-                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                    moved = true;
-                }
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
                 
-                // หากอยู่ในโหมด AR หรือกำลังลากย้าย
-                if (moved || isARMoving) {
+                if (moved) {
                     let newX = initialLeft + dx;
                     let newY = initialTop + dy;
                     newX = Math.max(10, Math.min(newX, window.innerWidth - 90));
@@ -535,45 +751,28 @@
             });
 
             letterEl.addEventListener('pointerup', (e) => {
-                if(letterEl.classList.contains('popping')) return;
+                if(letterEl.classList.contains('popping') || arModeActive) return;
                 letterEl.releasePointerCapture(e.pointerId);
-                letterEl.style.animation = '';
-                letterEl.style.zIndex = '';
-                isARMoving = false;
+                letterEl.classList.remove('grabbed');
                 
                 if (!moved) {
                     const currentTime = new Date().getTime();
-                    const tapLength = currentTime - lastTapTime;
+                    const tapLength = currentTime - lastTouchTapTime;
                     
                     if (tapLength < 350 && tapLength > 0) {
-                        // สลับโหมด: จีบนิ้วสองครั้งสามารถเลือกคำตอบหรือเปิดโหมด AR เคลื่อนย้ายได้
                         playPopSound();
-                        triggerARSelection(char, letterEl);
-                        lastTapTime = 0;
+                        showFloatingText('✨ Select!', e.clientX, e.clientY - 20, '#3B82F6');
+                        checkLetter(char, letterEl);
+                        lastTouchTapTime = 0;
                     } else {
-                        lastTapTime = currentTime;
+                        lastTouchTapTime = currentTime;
                         playPopSound();
                         checkLetter(char, letterEl);
                     }
                 }
             });
 
-            // เพิ่มฟังก์ชันรองรับ Touch สัมผัสแบบ 2 นิ้ว (Pinch / AR Gesture) เพื่อย้ายตำแหน่งฟองสบู่
-            letterEl.addEventListener('touchstart', (e) => {
-                if (e.touches.length >= 2) {
-                    isARMoving = true;
-                    const rect = letterEl.getBoundingClientRect();
-                    showFloatingText('🤏 AR Move Mode', rect.left, rect.top - 20, '#3B82F6');
-                }
-            }, {passive: true});
-
             arWorld.appendChild(letterEl);
-        }
-
-        function triggerARSelection(char, element) {
-            const rect = element.getBoundingClientRect();
-            showFloatingText('✨ AR Select!', rect.left, rect.top - 20, '#3B82F6');
-            checkLetter(char, element);
         }
 
         function checkLetter(char, element) {
@@ -598,7 +797,6 @@
                         wordComplete();
                     }
                 } else {
-                    // ถ้าตอบผิด ตัวอักษรจะไม่หายไป แต่แสดงคำว่า "ผิด!"
                     showFloatingText('ผิด!', rect.left, rect.top, '#EF4444');
                 }
             }
@@ -615,7 +813,6 @@
             playWinSound();
             fireConfetti();
             
-            // รีเซ็ตเคลียร์คำตอบทั้งหมดบนจอ แล้วขึ้นคำใหม่ทันที
             setTimeout(() => {
                 loadNextWord();
             }, 1200);
@@ -632,7 +829,7 @@
             floater.style.fontSize = '2.2rem';
             floater.style.textShadow = '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white';
             floater.style.pointerEvents = 'none';
-            floater.style.zIndex = '100';
+            floater.style.zIndex = '10000';
             floater.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
             
             document.body.appendChild(floater);
@@ -647,6 +844,7 @@
             }, 800);
         }
 
+        // --- Audio & Effects ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let musicPlaying = false;
         let musicTimer = null;
@@ -691,10 +889,7 @@
         function playMelody() {
             if (!musicPlaying) return;
             const now = audioCtx.currentTime;
-            const melody = [
-                392.00, 523.25, 659.25, 523.25,
-                783.99, 659.25, 523.25, 392.00
-            ];
+            const melody = [392.00, 523.25, 659.25, 523.25, 783.99, 659.25, 523.25, 392.00];
             melody.forEach((note, i) => {
                 playNote(note, 0.3, now + i * 0.4, 0.02, "sine");
             });
