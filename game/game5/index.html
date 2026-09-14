@@ -69,7 +69,7 @@
             flex-direction: column;
             gap: 0.5rem;
             pointer-events: auto;
-            background: linear-gradient(to bottom, rgba(56, 189, 248, 0.8), transparent);
+            background: linear-gradient(to bottom, rgba(56, 189, 248, 0.9), transparent);
         }
 
         .stats-bar {
@@ -94,12 +94,12 @@
         }
 
         .question-box {
-            padding: 1rem 1.5rem;
+            padding: 0.8rem 1.2rem;
             text-align: center;
             max-width: 600px;
             margin: 0 auto;
             width: 100%;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
         }
 
@@ -107,6 +107,7 @@
             flex: 1;
             pointer-events: none;
             width: 100%;
+            position: relative;
         }
 
         .bottom-section {
@@ -116,7 +117,7 @@
             align-items: center;
             gap: 1rem;
             pointer-events: auto;
-            background: linear-gradient(to top, rgba(186, 230, 253, 1) 0%, transparent 100%);
+            background: linear-gradient(to top, rgba(186, 230, 253, 0.9) 0%, transparent 100%);
         }
 
         #target-word-display {
@@ -150,7 +151,7 @@
 
         #ar-world {
             position: absolute;
-            top: -10%; left: -10%; width: 120%; height: 120%;
+            top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: auto;
             transition: transform 0.1s ease-out;
         }
@@ -202,8 +203,8 @@
 
         @keyframes floatBubble {
             0%, 100% { transform: translateY(0) translateX(0) scale(1); }
-            33% { transform: translateY(-20px) translateX(10px) scale(1.02); }
-            66% { transform: translateY(-10px) translateX(-10px) scale(0.98); }
+            33% { transform: translateY(-15px) translateX(10px) scale(1.02); }
+            66% { transform: translateY(-8px) translateX(-10px) scale(0.98); }
         }
 
         .popping {
@@ -296,8 +297,8 @@
                     <div class="stat-box">⏱️ <span id="timer">60</span>s</div>
                 </div>
                 <div class="sponge-panel question-box">
-                    <div class="heading-font text-blue-900 text-lg mb-1">คำใบ้:</div>
-                    <div id="word-hint" class="text-2xl text-yellow-900 font-bold">หาตัวอักษรมาเติมให้เต็ม</div>
+                    <div class="heading-font text-blue-900 text-sm mb-0.5">คำใบ้:</div>
+                    <div id="word-hint" class="text-xl text-yellow-900 font-bold">หาตัวอักษรมาเติมให้เต็ม</div>
                 </div>
             </div>
 
@@ -311,9 +312,10 @@
         <div id="start-screen" class="overlay-screen">
             <div class="sponge-panel p-8 max-w-sm mx-4">
                 <h1 class="text-5xl heading-font text-yellow-600 mb-4 tracking-wide" style="text-shadow: 2px 2px 0px white, -1px -1px 0px white;">เกมล่าคำไทย</h1>
-                <p class="text-lg font-semibold text-blue-900">
-                    หันโทรศัพท์เพื่อมองหา หรือใช้เมาส์/นิ้วลาก <span class="text-blue-600 font-bold">ฟองสบู่ตัวอักษร</span> <br><br>
-                    เลือกตัวอักษรให้ถูกต้องตามลำดับในเวลา 1 นาที!
+                <p class="text-base font-semibold text-blue-900">
+                    ✨ แตะหรือลากฟองสบู่เพื่อเลือกคำตอบ<br>
+                    ✨ <strong class="text-blue-700">จีบนิ้ว 2 ครั้งเร็วๆ</strong> บนฟองสบู่เพื่อเลือกแบบ AR<br><br>
+                    หาตัวอักษรให้ถูกต้องตามลำดับในเวลา 1 นาที!
                 </p>
                 <button id="start-btn" class="btn-sponge">เริ่มเล่นเลย!</button>
             </div>
@@ -377,8 +379,8 @@
         function setupParallax() {
             document.addEventListener('mousemove', (e) => {
                 if(!isPlaying) return;
-                const x = (window.innerWidth / 2 - e.pageX) / 25;
-                const y = (window.innerHeight / 2 - e.pageY) / 25;
+                const x = (window.innerWidth / 2 - e.pageX) / 35;
+                const y = (window.innerHeight / 2 - e.pageY) / 35;
                 arWorld.style.transform = `translate(${x}px, ${y}px)`;
             });
 
@@ -445,10 +447,9 @@
             hintDisplay.textContent = currentWordObj.hint;
             renderTargetDisplay();
             
-            // สร้างคำตอบและตัวหลอกทั้งหมดขึ้นมาพร้อมกันทันที
             targetWord.forEach(char => spawnSpecificLetter(char));
             
-            const extraBubblesCount = 12;
+            const extraBubblesCount = 10;
             for(let i=0; i < extraBubblesCount; i++) {
                 spawnSpecificLetter(getRandomThaiChar());
             }
@@ -477,22 +478,16 @@
             letterEl.textContent = char;
 
             const size = 80;
-            const playRect = playArea.getBoundingClientRect();
-            const arRect = arWorld.getBoundingClientRect();
-
-            const safeTop = playRect.top - arRect.top + 10;
-            const safeBottom = playRect.bottom - arRect.top - size - 10;
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
             
             const minX = 20;
-            const maxX = arRect.width - size - 20;
+            const maxX = Math.max(minX, screenW - size - 20);
+            const minY = 140; 
+            const maxY = Math.max(minY, screenH - size - 160);
 
             const x = Math.random() * (maxX - minX) + minX;
-            let y = safeTop;
-            if (safeBottom > safeTop) {
-                y = Math.random() * (safeBottom - safeTop) + safeTop;
-            } else {
-                y = (arRect.height / 2) + (Math.random() * 100 - 50);
-            }
+            const y = Math.random() * (maxY - minY) + minY;
 
             letterEl.style.left = `${x}px`;
             letterEl.style.top = `${y}px`;
@@ -501,10 +496,11 @@
             let moved = false;
             let startX, startY;
             let initialLeft, initialTop;
+            let lastTapTime = 0;
+            let isARMoving = false; // สถานะกำลังลากแบบ AR
 
             letterEl.addEventListener('pointerdown', (e) => {
                 if(letterEl.classList.contains('popping')) return;
-                e.preventDefault();
                 moved = false;
                 startX = e.clientX;
                 startY = e.clientY;
@@ -526,9 +522,15 @@
                     moved = true;
                 }
                 
-                if (moved) {
-                    letterEl.style.left = `${initialLeft + dx}px`;
-                    letterEl.style.top = `${initialTop + dy}px`;
+                // หากอยู่ในโหมด AR หรือกำลังลากย้าย
+                if (moved || isARMoving) {
+                    let newX = initialLeft + dx;
+                    let newY = initialTop + dy;
+                    newX = Math.max(10, Math.min(newX, window.innerWidth - 90));
+                    newY = Math.max(110, Math.min(newY, window.innerHeight - 150));
+
+                    letterEl.style.left = `${newX}px`;
+                    letterEl.style.top = `${newY}px`;
                 }
             });
 
@@ -537,14 +539,41 @@
                 letterEl.releasePointerCapture(e.pointerId);
                 letterEl.style.animation = '';
                 letterEl.style.zIndex = '';
+                isARMoving = false;
                 
                 if (!moved) {
-                    playPopSound(); 
-                    checkLetter(char, letterEl);
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTapTime;
+                    
+                    if (tapLength < 350 && tapLength > 0) {
+                        // สลับโหมด: จีบนิ้วสองครั้งสามารถเลือกคำตอบหรือเปิดโหมด AR เคลื่อนย้ายได้
+                        playPopSound();
+                        triggerARSelection(char, letterEl);
+                        lastTapTime = 0;
+                    } else {
+                        lastTapTime = currentTime;
+                        playPopSound();
+                        checkLetter(char, letterEl);
+                    }
                 }
             });
 
+            // เพิ่มฟังก์ชันรองรับ Touch สัมผัสแบบ 2 นิ้ว (Pinch / AR Gesture) เพื่อย้ายตำแหน่งฟองสบู่
+            letterEl.addEventListener('touchstart', (e) => {
+                if (e.touches.length >= 2) {
+                    isARMoving = true;
+                    const rect = letterEl.getBoundingClientRect();
+                    showFloatingText('🤏 AR Move Mode', rect.left, rect.top - 20, '#3B82F6');
+                }
+            }, {passive: true});
+
             arWorld.appendChild(letterEl);
+        }
+
+        function triggerARSelection(char, element) {
+            const rect = element.getBoundingClientRect();
+            showFloatingText('✨ AR Select!', rect.left, rect.top - 20, '#3B82F6');
+            checkLetter(char, element);
         }
 
         function checkLetter(char, element) {
@@ -553,7 +582,6 @@
                 const rect = element.getBoundingClientRect();
                 
                 if (char === neededChar) {
-                    // ถ้าตอบถูก: ฟองสบู่จะแตกหายไป และเติมลงช่องคำตอบ
                     element.classList.add('popping');
                     setTimeout(() => {
                         if(element.parentNode === arWorld) arWorld.removeChild(element);
@@ -570,7 +598,7 @@
                         wordComplete();
                     }
                 } else {
-                    // ถ้าตอบผิด: ฟองสบู่ไม่หายไป แสดงคำว่า "ผิด!" เตือนเฉยๆ
+                    // ถ้าตอบผิด ตัวอักษรจะไม่หายไป แต่แสดงคำว่า "ผิด!"
                     showFloatingText('ผิด!', rect.left, rect.top, '#EF4444');
                 }
             }
@@ -587,7 +615,7 @@
             playWinSound();
             fireConfetti();
             
-            // รีเซ็ตหน้าจอ เคลียร์คำตอบทั้งหมดบนจอแล้วขึ้นคำใหม่ทันที
+            // รีเซ็ตเคลียร์คำตอบทั้งหมดบนจอ แล้วขึ้นคำใหม่ทันที
             setTimeout(() => {
                 loadNextWord();
             }, 1200);
@@ -596,12 +624,12 @@
         function showFloatingText(text, x, y, color) {
             const floater = document.createElement('div');
             floater.textContent = text;
-            floater.style.position = 'absolute';
-            floater.style.left = `${x}px`;
-            floater.style.top = `${y}px`;
+            floater.style.position = 'fixed';
+            floater.style.left = `${Math.max(10, Math.min(x, window.innerWidth - 120))}px`;
+            floater.style.top = `${Math.max(10, Math.min(y, window.innerHeight - 80))}px`;
             floater.style.color = color;
             floater.style.fontWeight = '900';
-            floater.style.fontSize = '2.5rem';
+            floater.style.fontSize = '2.2rem';
             floater.style.textShadow = '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white';
             floater.style.pointerEvents = 'none';
             floater.style.zIndex = '100';
