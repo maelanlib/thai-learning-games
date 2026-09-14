@@ -91,6 +91,16 @@
         </p>
     </div>
 
+    <!-- หน้าจอจบเกม -->
+    <div id="end-screen" class="absolute inset-0 z-50 bg-stone-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white p-4 text-center hidden">
+        <h1 class="text-4xl md:text-6xl font-bold mb-4 text-amber-300 drop-shadow-lg">หมดเวลา!</h1>
+        <p class="text-2xl md:text-4xl mb-6 text-stone-200">คะแนนของคุณ</p>
+        <div class="text-6xl md:text-8xl font-bold text-emerald-400 mb-8 drop-shadow-xl" id="final-score">0</div>
+        <button onclick="resetGame()" class="px-8 md:px-12 py-4 md:py-5 bg-emerald-600 hover:bg-emerald-500 rounded-full text-2xl md:text-4xl font-bold shadow-xl transition-all hover:scale-105 flex items-center gap-4">
+            <i class="ph-fill ph-arrow-counter-clockwise"></i> เล่นอีกครั้ง
+        </button>
+    </div>
+
     <!-- UI หลักของเกม -->
     <div id="game-ui" class="relative z-10 w-full max-w-7xl h-full flex flex-col justify-between p-4 md:p-8 opacity-0 pointer-events-none transition-opacity duration-500">
         
@@ -340,9 +350,58 @@
                     if (timeLeft > 0 && !isAnswered) {
                         timeLeft--;
                         document.getElementById('timer').innerText = formatTime(timeLeft);
+                    } else if (timeLeft === 0) {
+                        clearInterval(gameTimerId);
+                        endGame();
                     }
                 }, 1000);
             }, 500);
+        }
+
+        function endGame() {
+            const gameUi = document.getElementById('game-ui');
+            const endScreen = document.getElementById('end-screen');
+            const finalScore = document.getElementById('final-score');
+            
+            gameUi.style.opacity = '0';
+            gameUi.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                finalScore.innerText = score;
+                endScreen.classList.remove('hidden');
+                endScreen.classList.add('flex');
+            }, 500);
+        }
+
+        function resetGame() {
+            score = 0;
+            timeLeft = 180;
+            isAnswered = false;
+            
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('timer').innerText = formatTime(timeLeft);
+            
+            const endScreen = document.getElementById('end-screen');
+            const gameUi = document.getElementById('game-ui');
+            
+            endScreen.classList.remove('flex');
+            endScreen.classList.add('hidden');
+            
+            currentQuestionList = shuffleArray([...questionDatabase]);
+            loadNextQuestion();
+            
+            gameUi.style.opacity = '1';
+            gameUi.style.pointerEvents = 'auto';
+            
+            gameTimerId = setInterval(() => {
+                if (timeLeft > 0 && !isAnswered) {
+                    timeLeft--;
+                    document.getElementById('timer').innerText = formatTime(timeLeft);
+                } else if (timeLeft === 0) {
+                    clearInterval(gameTimerId);
+                    endGame();
+                }
+            }, 1000);
         }
 
         function toggleMute() {
