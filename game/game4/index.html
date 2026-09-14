@@ -163,6 +163,35 @@
             background: #00ffcc;
             border-radius: 4px;
         }
+
+        /* ============================================================
+           MOBILE HUD - keep the play area clear
+           ============================================================ */
+        @media (max-width: 640px) {
+            #hud {
+                gap: 4px !important;
+            }
+
+            #hudPlayerName {
+                max-width: 55px !important;
+            }
+
+            #hudMission {
+                font-size: 16px !important;
+            }
+
+            #hudTimer {
+                font-size: 12px !important;
+            }
+
+            #hudScore {
+                font-size: 14px !important;
+            }
+
+            #controlsHint {
+                bottom: 6px !important;
+            }
+        }
     </style>
 </head>
 
@@ -171,47 +200,47 @@
     <video id="videoElement" autoplay playsinline></video>
     <canvas id="gameCanvas"></canvas>
 
-    <div id="uiContainer" class="ui-layer flex flex-col justify-between p-4">
+    <div id="uiContainer" class="ui-layer flex flex-col justify-between p-2 md:p-4">
 
         <!-- HUD -->
-        <div id="hud" class="hidden w-full flex justify-between items-start">
+        <div id="hud" class="hidden w-full flex flex-nowrap justify-between items-start gap-1 md:gap-0">
 
-            <div class="glass-dark rounded-xl p-3 px-5 flex flex-col gap-2 border-l-4 border-l-[#00ffcc]">
-                <div class="text-xl font-bold flex items-center gap-2">
+            <div class="glass-dark rounded-lg md:rounded-xl p-1.5 px-2 md:p-3 md:px-5 flex flex-col gap-1 md:gap-2 border-l-2 md:border-l-4 border-l-[#00ffcc] flex-shrink-0 min-w-0">
+                <div class="text-[10px] md:text-xl font-bold flex items-center gap-1 md:gap-2">
                     <span class="neon-text-blue">ผู้เล่น:</span>
-                    <span id="hudPlayerName" class="text-white">สมชาย</span>
+                    <span id="hudPlayerName" class="text-white truncate max-w-[55px] md:max-w-[150px]">สมชาย</span>
                 </div>
 
                 <div id="hudLives"
-                    class="text-2xl tracking-widest text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]">
+                    class="text-[12px] md:text-2xl tracking-normal md:tracking-widest text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)] whitespace-nowrap">
                     ❤️ ❤️ ❤️
                 </div>
             </div>
 
-            <div class="glass rounded-2xl p-4 px-8 text-center flex-1 max-w-md mx-4 border-t-4 border-t-[#ff00ff]">
-                <div class="text-sm text-gray-400 mb-1 font-semibold uppercase tracking-widest">
+            <div class="glass rounded-lg md:rounded-2xl p-1.5 md:p-4 px-2 md:px-8 text-center flex-1 min-w-0 max-w-none md:max-w-md mx-1 md:mx-4 border-t-2 md:border-t-4 border-t-[#ff00ff]">
+                <div class="text-[8px] md:text-sm text-gray-400 mb-0 md:mb-1 font-semibold uppercase tracking-widest whitespace-nowrap">
                     &gt; เป้าหมายปัจจุบัน &lt;
                 </div>
 
-                <div class="text-2xl md:text-3xl font-bold text-white drop-shadow-md">
-                    <span id="hudMission" class="neon-text-pink text-4xl">"คำนาม"</span>
+                <div class="text-base md:text-3xl font-bold text-white drop-shadow-md">
+                    <span id="hudMission" class="neon-text-pink text-base md:text-4xl whitespace-nowrap">"คำนาม"</span>
                 </div>
             </div>
 
-            <div class="glass-dark rounded-xl p-3 px-5 flex flex-col gap-2 items-end min-w-[150px] border-r-4 border-r-[#facc15]">
+            <div class="glass-dark rounded-lg md:rounded-xl p-1.5 px-2 md:p-3 md:px-5 flex flex-col gap-1 md:gap-2 items-end min-w-[75px] md:min-w-[150px] border-r-2 md:border-r-4 border-r-[#facc15] flex-shrink-0">
 
-                <div class="text-2xl font-bold font-mono flex items-center gap-2 transition-all neon-text-yellow"
+                <div class="text-[11px] md:text-2xl font-bold font-mono flex items-center gap-1 md:gap-2 transition-all neon-text-yellow whitespace-nowrap"
                     id="hudTimerContainer">
                     เวลา <span id="hudTimer" class="text-white">02:00</span>
                 </div>
 
-                <div class="text-lg font-bold text-gray-300">
+                <div class="text-[10px] md:text-lg font-bold text-gray-300 whitespace-nowrap">
                     คะแนน:
-                    <span id="hudScore" class="neon-text-blue text-2xl">0</span>
+                    <span id="hudScore" class="neon-text-blue text-sm md:text-2xl">0</span>
                 </div>
 
                 <div id="hudCombo"
-                    class="text-sm font-bold transition-all opacity-0 transform translate-x-4 neon-text-pink">
+                    class="text-[8px] md:text-sm font-bold transition-all opacity-0 transform translate-x-4 neon-text-pink whitespace-nowrap">
                     🔥 คอมโบ x2
                 </div>
 
@@ -224,14 +253,14 @@
 
         <!-- Controls -->
         <div id="controlsHint"
-            class="hidden absolute bottom-6 left-1/2 transform -translate-x-1/2 glass px-6 py-3 rounded-full text-sm font-bold text-[#00ffcc] flex items-center gap-6 uppercase tracking-wider">
+            class="hidden absolute bottom-2 md:bottom-6 left-1/2 transform -translate-x-1/2 glass px-2 py-1.5 md:px-6 md:py-3 rounded-full text-[8px] md:text-sm font-bold text-[#00ffcc] flex items-center gap-2 md:gap-6 uppercase tracking-wider whitespace-nowrap max-w-[calc(100vw-12px)]">
 
             <span>&gt; ควบคุมด้วย AR (จีบนิ้ว) หรือ คลิก/แตะหน้าจอ &lt;</span>
 
             <button id="btnToggleAudio"
-                class="interactive text-gray-400 hover:text-white transition flex items-center gap-2 border-l border-gray-600 pl-6">
+                class="interactive text-gray-400 hover:text-white transition flex items-center gap-1 md:gap-2 border-l border-gray-600 pl-2 md:pl-6">
                 <span id="audioIcon">🔊</span>
-                ปิดเสียง
+                เปิดเสียง
             </button>
 
         </div>
@@ -508,27 +537,44 @@
         // ============================================================
 
         let audioCtx = null;
+        let bgmPlaying = false;
+        let bgmTimer = null;
+        let bgmMasterGain = null;
 
-        function initAudio() {
+        async function initAudio() {
 
-            if (!audioCtx) {
-                audioCtx = new (
-                    window.AudioContext ||
-                    window.webkitAudioContext
-                )();
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (
+                        window.AudioContext ||
+                        window.webkitAudioContext
+                    )();
+                }
+
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                // Master volume เฉพาะเพลง BGM
+                if (!bgmMasterGain) {
+                    bgmMasterGain = audioCtx.createGain();
+                    bgmMasterGain.gain.setValueAtTime(
+                        0.65,
+                        audioCtx.currentTime
+                    );
+                    bgmMasterGain.connect(audioCtx.destination);
+                }
+
+                state.audioEnabled = true;
+
+                document.getElementById('btnToggleAudio').innerHTML =
+                    `<span id="audioIcon">🔊</span> ปิดเสียง`;
+
+                startZombieBGM();
+
+            } catch (err) {
+                console.error('Audio initialization failed:', err);
             }
-
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-
-            state.audioEnabled = true;
-
-            document.getElementById('btnToggleAudio').innerHTML =
-                `<span id="audioIcon">🔊</span> ปิดเสียง`;
-
-            // เริ่มเพลง Zombie BGM
-            startZombieBGM();
         }
 
 
@@ -546,40 +592,35 @@
 
             if (!state.audioEnabled || !audioCtx) return;
 
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
             osc.type = type;
-
-            osc.frequency.setValueAtTime(
-                freq,
-                audioCtx.currentTime
-            );
+            osc.frequency.setValueAtTime(freq, now);
 
             if (sweep) {
-
                 osc.frequency.exponentialRampToValueAtTime(
                     Math.max(freq * 0.1, 20),
-                    audioCtx.currentTime + duration
+                    now + duration
                 );
-
             }
 
-            gain.gain.setValueAtTime(
-                vol,
-                audioCtx.currentTime
-            );
-
+            gain.gain.setValueAtTime(vol, now);
             gain.gain.exponentialRampToValueAtTime(
                 0.01,
-                audioCtx.currentTime + duration
+                now + duration
             );
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
+            osc.start(now);
+            osc.stop(now + duration);
         }
 
 
@@ -680,47 +721,36 @@
         // 🎵 ZOMBIE BGM
         // ============================================================
 
-        let bgmPlaying = false;
-        let bgmTimer = null;
-
-
         function bgmNote(
             freq,
             duration,
             startTime,
-            volume = 0.025,
+            volume = 0.06,
             type = 'square'
         ) {
 
-            if (!state.audioEnabled || !audioCtx) return;
+            if (!state.audioEnabled || !audioCtx || !bgmMasterGain) {
+                return;
+            }
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
             osc.type = type;
+            osc.frequency.setValueAtTime(freq, startTime);
 
-            osc.frequency.setValueAtTime(
-                freq,
-                startTime
-            );
-
-            gain.gain.setValueAtTime(
-                0.001,
-                startTime
-            );
-
+            gain.gain.setValueAtTime(0.001, startTime);
             gain.gain.linearRampToValueAtTime(
                 volume,
                 startTime + 0.015
             );
-
             gain.gain.exponentialRampToValueAtTime(
                 0.001,
                 startTime + duration
             );
 
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(bgmMasterGain);
 
             osc.start(startTime);
             osc.stop(startTime + duration);
@@ -733,93 +763,107 @@
                 return;
             }
 
-            const now = audioCtx.currentTime;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
 
+            if (!bgmMasterGain) {
+                bgmMasterGain = audioCtx.createGain();
+                bgmMasterGain.gain.setValueAtTime(
+                    0.65,
+                    audioCtx.currentTime
+                );
+                bgmMasterGain.connect(audioCtx.destination);
+            }
+
+            const now = audioCtx.currentTime;
 
             // ========================================================
             // MAIN MELODY
             // ========================================================
 
             const melody = [
-
                 110, 110, 146.83, 110,
                 98, 98, 130.81, 98,
-
                 110, 110, 164.81, 146.83,
                 130.81, 110, 98, 82.41,
-
                 110, 110, 146.83, 164.81,
                 146.83, 130.81, 110, 98,
-
                 82.41, 98, 110, 130.81,
                 110, 98, 82.41, 73.42
             ];
 
-
             melody.forEach((note, i) => {
-
                 bgmNote(
                     note,
                     0.22,
                     now + i * 0.25,
-                    0.025,
+                    0.06,
                     'square'
                 );
-
             });
-
 
             // ========================================================
             // BASS
             // ========================================================
 
             const bass = [
-
                 55, 55, 73.42, 55,
                 49, 49, 65.41, 49,
-
                 55, 55, 82.41, 73.42,
                 65.41, 55, 49, 41.20
             ];
 
-
             bass.forEach((note, i) => {
-
                 bgmNote(
                     note,
                     0.35,
                     now + i * 0.5,
-                    0.035,
+                    0.08,
                     'sawtooth'
                 );
-
             });
-
 
             // ========================================================
             // LOOP
             // ========================================================
 
             bgmTimer = setTimeout(() => {
-
-                playZombieBGM();
-
+                if (bgmPlaying && state.audioEnabled) {
+                    playZombieBGM();
+                }
             }, 8000);
         }
 
 
         function startZombieBGM() {
 
-            if (bgmPlaying) return;
+            if (!audioCtx || !state.audioEnabled) {
+                return;
+            }
+
+            if (bgmPlaying) {
+                return;
+            }
 
             bgmPlaying = true;
 
-            if (
-                audioCtx &&
-                audioCtx.state === 'suspended'
-            ) {
+            if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
+
+            if (!bgmMasterGain) {
+                bgmMasterGain = audioCtx.createGain();
+                bgmMasterGain.connect(audioCtx.destination);
+            }
+
+            const now = audioCtx.currentTime;
+            bgmMasterGain.gain.cancelScheduledValues(now);
+            bgmMasterGain.gain.setValueAtTime(0.001, now);
+            bgmMasterGain.gain.linearRampToValueAtTime(
+                0.65,
+                now + 0.15
+            );
 
             playZombieBGM();
         }
@@ -830,10 +874,21 @@
             bgmPlaying = false;
 
             if (bgmTimer) {
-
                 clearTimeout(bgmTimer);
                 bgmTimer = null;
+            }
 
+            if (bgmMasterGain && audioCtx) {
+                const now = audioCtx.currentTime;
+                bgmMasterGain.gain.cancelScheduledValues(now);
+                bgmMasterGain.gain.setValueAtTime(
+                    Math.max(bgmMasterGain.gain.value, 0.001),
+                    now
+                );
+                bgmMasterGain.gain.linearRampToValueAtTime(
+                    0.001,
+                    now + 0.08
+                );
             }
         }
 
@@ -844,12 +899,11 @@
 
         document
             .getElementById('btnToggleAudio')
-            .addEventListener('click', () => {
+            .addEventListener('click', async () => {
 
                 if (state.audioEnabled) {
 
                     state.audioEnabled = false;
-
                     stopZombieBGM();
 
                     document
@@ -859,14 +913,8 @@
 
                 } else {
 
-                    initAudio();
-
-                    document
-                        .getElementById('btnToggleAudio')
-                        .innerHTML =
-                        `<span id="audioIcon">🔊</span> ปิดเสียง`;
+                    await initAudio();
                 }
-
             });
 
 
@@ -2780,7 +2828,7 @@
 
 
                     // เปิด Audio + เริ่มเพลง
-                    initAudio();
+                    await initAudio();
 
 
                     await initAR();
@@ -2945,6 +2993,9 @@
             );
 
 
+            // หยุดเพลงก่อนเล่นเสียง Game Over
+            stopZombieBGM();
+
             sfx.gameOver();
 
 
@@ -3074,6 +3125,10 @@
 
 
                     beginPlay();
+
+                    if (state.audioEnabled && !bgmPlaying) {
+                        startZombieBGM();
+                    }
                 }
             );
 
@@ -3252,4 +3307,3 @@
 
 </body>
 </html>
-
