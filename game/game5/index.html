@@ -3,358 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>เกมล่าคำไทย (Thai Word Hunter)</title>
+    <title>เกมล่าคำไทย (Thai Word Hunter) - Sponge Theme</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&family=Mitr:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&family=Mitr:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         body {
             font-family: 'Sarabun', sans-serif;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #f0f8ff; /* Fallback background */
-            /* Simulate a camera feed background for "AR" feel */
-            background-image: url('https://cdn.pixabay.com/photo/2023/09/15/14/50/sky-8254928_1280.jpg');
-            background-size: cover;
-            background-position: center;
-            touch-action: none; /* Prevent default touch actions like scrolling */
+            background: linear-gradient(180deg, #38BDF8 0%, #BAE6FD 100%);
+            touch-action: none;
+            user-select: none;
         }
 
         h1, h2, h3, .heading-font {
             font-family: 'Mitr', sans-serif;
         }
 
+        .sponge-panel {
+            background-color: #FDE047;
+            border: 6px solid #B45309;
+            border-radius: 20px;
+            box-shadow: 0 8px 0 #92400E, 0 15px 25px rgba(0,0,0,0.25);
+            color: #1E3A8A;
+            position: relative;
+            overflow: hidden;
+            z-index: 10;
+        }
+        
+        .sponge-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(#B45309 10%, transparent 15%),
+                radial-gradient(#B45309 12%, transparent 18%),
+                radial-gradient(#B45309 8%, transparent 12%);
+            background-size: 40px 40px, 30px 30px, 50px 50px;
+            background-position: 0 0, 15px 15px, 25px 35px;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
         #game-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            /* Add a slight blur to background to make letters pop more */
-            backdrop-filter: blur(2px);
+            overflow: hidden;
         }
 
         #ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to letters */
-            z-index: 10;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 20;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
         }
 
-        .top-bar {
+        .top-section {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: auto;
+            background: linear-gradient(to bottom, rgba(56, 189, 248, 0.8), transparent);
+        }
+
+        .stats-bar {
             display: flex;
             justify-content: space-between;
-            padding: 1.5rem;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+            gap: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .stat-box {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 0.5rem 1.5rem;
-            border-radius: 9999px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            font-weight: bold;
-            font-size: 1.25rem;
-            color: #1e3a8a; /* Tailwind blue-900 */
-            border: 2px solid #60a5fa; /* Tailwind blue-400 */
-        }
-
-        .target-word-container {
-            text-align: center;
-            margin-top: 2rem;
-            pointer-events: auto; /* Allow interaction if needed later */
-        }
-
-        #target-word-display {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 1rem 2rem;
-            border-radius: 1rem;
-            font-size: 2.5rem;
+            background: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 999px;
             font-weight: 800;
-            color: #047857; /* Tailwind emerald-700 */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-            border: 3px solid #34d399; /* Tailwind emerald-400 */
-            letter-spacing: 0.2em;
+            font-size: 1.2rem;
+            color: #2563EB;
+            border: 4px solid #60A5FA;
+            box-shadow: 0 4px 0 #3B82F6;
+            display: flex; align-items: center; gap: 0.5rem;
         }
 
-        .hint-text {
-            color: white;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-            font-size: 1.1rem;
-            margin-top: 0.5rem;
+        .question-box {
+            padding: 1rem 1.5rem;
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            font-size: 1.2rem;
             font-weight: 600;
         }
 
-        .bottom-bar {
-            padding: 2rem;
-            text-align: center;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            min-height: 150px;
+        #play-area {
+            flex: 1;
+            pointer-events: none;
+            width: 100%;
+        }
+
+        .bottom-section {
+            padding: 1rem 1rem 2rem 1rem;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
             align-items: center;
+            gap: 1rem;
+            pointer-events: auto;
+            background: linear-gradient(to top, rgba(186, 230, 253, 1) 0%, transparent 100%);
         }
 
-        #collected-letters {
+        #target-word-display {
             display: flex;
-            justify-content: center;
             gap: 0.5rem;
-            min-height: 4rem; /* Placeholder height */
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
-        .collected-letter-slot {
-            width: 3.5rem;
-            height: 4rem;
-            background: rgba(255, 255, 255, 0.3);
-            border: 2px dashed rgba(255, 255, 255, 0.6);
-            border-radius: 0.5rem;
+        .word-slot {
+            width: 50px;
+            height: 60px;
+            background: white;
+            border: 4px solid #60A5FA;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 2rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            transition: all 0.3s;
+            font-weight: 800;
+            color: #047857;
+            box-shadow: 0 4px 0 #3B82F6;
         }
-        
-        .collected-letter-slot.filled {
-            background: rgba(255, 255, 255, 0.9);
-            color: #1e3a8a;
-            border: 2px solid #3b82f6; /* blue-500 */
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+
+        .word-slot.empty {
+            background: rgba(255,255,255,0.5);
+            border: 4px dashed #93C5FD;
+            color: transparent;
+            box-shadow: none;
         }
 
         #ar-world {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: auto; /* Critical for catching clicks/taps */
-            overflow: hidden;
+            top: -10%; left: -10%; width: 120%; height: 120%;
+            pointer-events: auto;
+            transition: transform 0.1s ease-out;
         }
 
         .floating-letter {
             position: absolute;
-            width: 60px;
-            height: 60px;
-            background: radial-gradient(circle at 30% 30%, #fbbf24, #d97706); /* amber-400 to amber-600 */
+            width: 80px; height: 80px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(200, 240, 255, 0.6) 40%, rgba(255, 200, 255, 0.4) 80%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem;
             font-weight: 800;
-            color: white;
+            color: #1E3A8A;
+            text-shadow: 0px 2px 4px rgba(255,255,255,0.8);
             box-shadow: 
-                0 10px 15px -3px rgba(0, 0, 0, 0.3),
-                inset 0 4px 6px rgba(255, 255, 255, 0.5);
+                inset 0 0 20px rgba(255, 255, 255, 0.8),
+                inset 10px 0 20px rgba(255, 255, 255, 0.4),
+                inset -10px -10px 20px rgba(100, 200, 255, 0.3),
+                0 6px 12px rgba(0,0,0,0.1);
             cursor: pointer;
-            user-select: none;
-            /* Animation for floating effect */
-            animation: float 4s ease-in-out infinite, pulse 2s infinite alternate;
-            border: 3px solid #fef3c7; /* amber-100 */
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
+            animation: floatBubble 5s ease-in-out infinite;
+            backdrop-filter: blur(2px);
+            touch-action: none;
         }
 
-        .floating-letter:active {
-            transform: scale(0.9);
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
+        .floating-letter::after {
+            content: '';
+            position: absolute;
+            top: 10%; left: 15%;
+            width: 25%; height: 25%;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+            filter: blur(1px);
         }
         
-        @keyframes pulse {
-            0% { box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); }
-            100% { box-shadow: 0 5px 25px rgba(245, 158, 11, 0.8); }
+        .floating-letter::before {
+            content: '';
+            position: absolute;
+            bottom: 10%; right: 15%;
+            width: 40%; height: 15%;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.3;
+            transform: rotate(-45deg);
+            filter: blur(2px);
+        }
+
+        @keyframes floatBubble {
+            0%, 100% { transform: translateY(0) translateX(0) scale(1); }
+            33% { transform: translateY(-20px) translateX(10px) scale(1.02); }
+            66% { transform: translateY(-10px) translateX(-10px) scale(0.98); }
+        }
+
+        .popping {
+            animation: popOut 0.2s forwards !important;
+            pointer-events: none;
         }
 
         @keyframes popOut {
             0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.5); opacity: 0.8; }
+            50% { transform: scale(1.4); opacity: 0.8; }
             100% { transform: scale(0); opacity: 0; }
         }
 
-        .popping {
-            animation: popOut 0.4s forwards !important;
-            pointer-events: none;
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.7;
+            animation: moveClouds linear infinite;
+            z-index: 0;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.05);
         }
-        
-        @keyframes successWord {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); color: #10b981; } /* emerald-500 */
+        .cloud::before, .cloud::after {
+            content: ''; position: absolute; background: white; border-radius: 50%;
         }
+        .cloud1 { width: 120px; height: 40px; top: 15%; left: -150px; animation-duration: 35s; }
+        .cloud1::before { width: 60px; height: 60px; top: -30px; left: 20px; }
+        .cloud1::after { width: 50px; height: 50px; top: -15px; left: 60px; }
         
-        .word-success {
-            animation: successWord 0.5s ease-in-out 2;
+        .cloud2 { width: 160px; height: 50px; top: 35%; left: -200px; animation-duration: 50s; animation-delay: -15s; opacity: 0.5; transform: scale(0.8); }
+        .cloud2::before { width: 80px; height: 80px; top: -40px; left: 25px; }
+        .cloud2::after { width: 60px; height: 60px; top: -20px; left: 80px; }
+
+        @keyframes moveClouds {
+            from { transform: translateX(0); }
+            to { transform: translateX(120vw); }
         }
 
         .overlay-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-            color: white;
-            text-align: center;
-            backdrop-filter: blur(5px);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(14, 165, 233, 0.4);
+            backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50; text-align: center;
         }
 
-        .hidden {
-            display: none !important;
-        }
+        .hidden { display: none !important; }
 
-        .btn {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
+        .btn-sponge {
+            background: #FDE047;
+            color: #92400E;
             font-family: 'Mitr', sans-serif;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 800;
             padding: 1rem 3rem;
             border-radius: 9999px;
-            border: none;
+            border: 5px solid #B45309;
             cursor: pointer;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 0 #92400E;
+            transition: all 0.1s;
             margin-top: 2rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 20px -3px rgba(0, 0, 0, 0.4);
+        .btn-sponge:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 #92400E;
         }
 
-        .btn:active {
-            transform: translateY(2px);
-        }
-
-        .game-title {
-            font-size: 4rem;
-            font-weight: 800;
-            background: -webkit-linear-gradient(#fcd34d, #d97706);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
-        }
-
-        /* Particle effect canvas */
         #confetti-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 40;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 40;
         }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        
-        <!-- AR World where letters will spawn -->
+        <div class="cloud cloud1"></div>
+        <div class="cloud cloud2"></div>
+
         <div id="ar-world"></div>
 
-        <!-- Canvas for victory effects -->
         <canvas id="confetti-canvas"></canvas>
 
-        <!-- UI Layer (Stats, Target Word, Inventory) -->
         <div id="ui-layer">
-            
-            <!-- Top Bar: Score and Timer -->
-            <div class="top-bar">
-                <div class="stat-box">คะแนน: <span id="score">0</span></div>
-                <div class="stat-box">เวลา: <span id="timer">180</span>s</div>
-            </div>
-
-            <!-- Target Word Display -->
-            <div class="target-word-container">
-                <div id="target-word-display" class="heading-font">_ _ _</div>
-                <div class="hint-text" id="word-hint">คำใบ้: หาตัวอักษรมาเติมให้เต็ม</div>
-            </div>
-
-            <!-- Bottom Bar: Collected Letters -->
-            <div class="bottom-bar">
-                <p class="text-white mb-2 font-semibold">ตัวอักษรที่เก็บได้</p>
-                <div id="collected-letters">
-                    <!-- Slots will be injected here by JS -->
+            <div class="top-section">
+                <div class="stats-bar">
+                    <div class="stat-box">⭐ <span id="score">0</span></div>
+                    <div class="stat-box">⏱️ <span id="timer">60</span>s</div>
+                </div>
+                <div class="sponge-panel question-box">
+                    <div class="heading-font text-blue-900 text-lg mb-1">คำใบ้:</div>
+                    <div id="word-hint" class="text-2xl text-yellow-900 font-bold">หาตัวอักษรมาเติมให้เต็ม</div>
                 </div>
             </div>
+
+            <div id="play-area"></div>
+
+            <div class="bottom-section">
+                <div id="target-word-display" class="heading-font"></div>
+            </div>
         </div>
 
-        <!-- Start Screen -->
         <div id="start-screen" class="overlay-screen">
-            <h1 class="game-title heading-font">ล่าคำไทย</h1>
-            <p class="text-xl max-w-md px-4">แตะที่ตัวอักษรที่ลอยอยู่รอบๆ ตัวคุณ เพื่อสะกดคำให้ถูกต้องตามคำใบ้ ทำคะแนนให้ได้มากที่สุดในเวลา 60 วินาที!</p>
-            <button id="start-btn" class="btn">เริ่มเล่น</button>
+            <div class="sponge-panel p-8 max-w-sm mx-4">
+                <h1 class="text-5xl heading-font text-yellow-600 mb-4 tracking-wide" style="text-shadow: 2px 2px 0px white, -1px -1px 0px white;">เกมล่าคำไทย</h1>
+                <p class="text-lg font-semibold text-blue-900">
+                    หันโทรศัพท์เพื่อมองหา หรือใช้เมาส์/นิ้วลาก <span class="text-blue-600 font-bold">ฟองสบู่ตัวอักษร</span> <br><br>
+                    เลือกตัวอักษรให้ถูกต้องตามลำดับในเวลา 1 นาที!
+                </p>
+                <button id="start-btn" class="btn-sponge">เริ่มเล่นเลย!</button>
+            </div>
         </div>
 
-        <!-- Game Over Screen -->
         <div id="game-over-screen" class="overlay-screen hidden">
-            <h1 class="game-title heading-font" style="font-size: 3rem;">หมดเวลา!</h1>
-            <p class="text-2xl mt-4">คุณทำคะแนนได้</p>
-            <p class="text-6xl font-bold text-yellow-400 my-4 heading-font" id="final-score">0</p>
-            <button id="restart-btn" class="btn">เล่นอีกครั้ง</button>
+            <div class="sponge-panel p-8 max-w-sm mx-4">
+                <h1 class="text-4xl heading-font text-red-600 mb-2">หมดเวลา!</h1>
+                <p class="text-xl font-bold text-blue-900">คะแนนของคุณ</p>
+                <p class="text-7xl font-black text-yellow-600 my-4 heading-font" style="text-shadow: 3px 3px 0 white;" id="final-score">0</p>
+                <button id="restart-btn" class="btn-sponge" style="font-size: 1.5rem;">เล่นอีกครั้ง</button>
+            </div>
         </div>
 
     </div>
 
     <script>
-        // Game Vocabulary Database
         const vocabulary = [
-            { word: "สวัสดี", hint: "คำทักทายของคนไทย" },
+            { word: "สวัสดี", hint: "คำทักทายของคนไทยเมื่อพบกัน" },
             { word: "ขอบคุณ", hint: "คำกล่าวแสดงความรู้สึกซาบซึ้ง" },
             { word: "อาหาร", hint: "สิ่งที่เรากินเพื่อดำรงชีวิต" },
             { word: "ครอบครัว", hint: "กลุ่มคนที่มีความสัมพันธ์กันทางสายเลือด" },
             { word: "ความสุข", hint: "ความรู้สึกดีใจ อิ่มเอมใจ" },
             { word: "โรงเรียน", hint: "สถานที่สำหรับศึกษาเล่าเรียน" },
-            { word: "ธรรมชาติ", hint: "สิ่งที่เกิดขึ้นเองตามธรรมดาของโลก" },
-            { word: "หนังสือ", hint: "สิ่งตีพิมพ์ที่เย็บเป็นเล่ม" },
-            { word: "ประเทศไทย", hint: "ชื่อประเทศของเรา" },
+            { word: "ฟองน้ำ", hint: "ของใช้นุ่มนิ่ม ซับน้ำได้ดี หรือตัวการ์ตูนสีเหลือง" },
+            { word: "ทะเล", hint: "แหล่งน้ำเค็มขนาดใหญ่" },
+            { word: "น่ารัก", hint: "ดูดี ถูกใจ น่าเอ็นดู" },
             { word: "รอยยิ้ม", hint: "อาการที่แสดงความสุขบนใบหน้า" }
         ];
 
-        // Thai characters for random filler spawning
-        const thaiConsonants = "กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ";
-        const thaiVowels = "ะาิีึืุูเแโใไ"; // Simplified for this game
+        const thaiConsonants = "กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวศษสหอ";
+        const thaiVowels = "ะาิีึืุูเแโใไ"; 
 
-        // Game State Variables
         let currentWordObj = null;
-        let targetWord = "";
+        let targetWord = [];
         let collectedWord = "";
         let score = 0;
         let timeLeft = 60;
         let gameInterval;
-        let spawnInterval;
         let isPlaying = false;
 
-        // DOM Elements
         const arWorld = document.getElementById('ar-world');
+        const playArea = document.getElementById('play-area');
         const scoreDisplay = document.getElementById('score');
         const timerDisplay = document.getElementById('timer');
         const targetWordDisplay = document.getElementById('target-word-display');
         const hintDisplay = document.getElementById('word-hint');
-        const collectedLettersContainer = document.getElementById('collected-letters');
         
         const startScreen = document.getElementById('start-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
@@ -365,13 +371,25 @@
         function initGame() {
             startBtn.addEventListener('click', startGame);
             restartBtn.addEventListener('click', startGame);
-            
-            // Handle window resize for letter bounds
-            window.addEventListener('resize', () => {
-                if(isPlaying) {
-                    // Could optionally reposition letters if they get lost outside bounds
-                }
+            setupParallax();
+        }
+
+        function setupParallax() {
+            document.addEventListener('mousemove', (e) => {
+                if(!isPlaying) return;
+                const x = (window.innerWidth / 2 - e.pageX) / 25;
+                const y = (window.innerHeight / 2 - e.pageY) / 25;
+                arWorld.style.transform = `translate(${x}px, ${y}px)`;
             });
+
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (e) => {
+                    if(!isPlaying) return;
+                    let tiltX = e.gamma ? Math.min(Math.max(e.gamma, -45), 45) : 0; 
+                    let tiltY = e.beta ? Math.min(Math.max(e.beta - 45, -45), 45) : 0;
+                    arWorld.style.transform = `translate(${tiltX * 2.5}px, ${tiltY * 2.5}px)`;
+                });
+            }
         }
 
         function startGame() {
@@ -379,55 +397,39 @@
             gameOverScreen.classList.add('hidden');
             
             score = 0;
-            timeLeft = 180;
+            timeLeft = 60;
             isPlaying = true;
             updateScore();
             updateTimerDisplay();
-            
-            // Clear any existing letters
             arWorld.innerHTML = '';
             
+            startMusic();
             loadNextWord();
             
             gameInterval = setInterval(updateTimer, 1000);
-            
-            // Spawn letters periodically
-            spawnInterval = setInterval(spawnLetter, 800);
-            
-            // Initial spawn
-            for(let i=0; i<5; i++) spawnLetter();
         }
 
         function endGame() {
             isPlaying = false;
             clearInterval(gameInterval);
-            clearInterval(spawnInterval);
+            stopMusic();
             
             finalScoreDisplay.textContent = score;
             gameOverScreen.classList.remove('hidden');
             
-            // Stop letter animations
             const letters = document.querySelectorAll('.floating-letter');
-            letters.forEach(l => {
-                l.style.animation = 'none';
-            });
+            letters.forEach(l => l.style.animationPlayState = 'paused');
         }
 
         function updateTimer() {
             timeLeft--;
             updateTimerDisplay();
-            if (timeLeft <= 0) {
-                endGame();
-            }
+            if (timeLeft <= 0) endGame();
         }
 
         function updateTimerDisplay() {
             timerDisplay.textContent = timeLeft;
-            if(timeLeft <= 10) {
-                timerDisplay.style.color = '#ef4444'; // red-500
-            } else {
-                timerDisplay.style.color = '#1e3a8a'; // back to normal
-            }
+            timerDisplay.style.color = timeLeft <= 10 ? '#DC2626' : '#2563EB';
         }
 
         function updateScore() {
@@ -435,84 +437,38 @@
         }
 
         function loadNextWord() {
-            // Pick a random word from vocabulary
+            arWorld.innerHTML = ''; 
             const randomIndex = Math.floor(Math.random() * vocabulary.length);
             currentWordObj = vocabulary[randomIndex];
-            
-            // Thai text splitting can be complex due to compound characters (vowels/tones)
-            // For this simple game, we will treat each character visually as a distinct target.
-            // Ideally, we'd use a grapheme splitter, but standard string split works okay for simple words without complex tones if we treat them carefully.
-            // To make it playable, let's just use standard string split and ensure vocab is simple.
-            targetWord = Array.from(currentWordObj.word); // Splits into array of characters, handles most basic Thai well enough for a mini-game
-            
+            targetWord = Array.from(currentWordObj.word); 
             collectedWord = "";
-            
-            hintDisplay.textContent = `คำใบ้: ${currentWordObj.hint}`;
-            
+            hintDisplay.textContent = currentWordObj.hint;
             renderTargetDisplay();
-            renderCollectedSlots();
             
-            // Ensure letters of the target word are available in the world
-            spawnTargetLetters();
+            // สร้างคำตอบและตัวหลอกทั้งหมดขึ้นมาพร้อมกันทันที
+            targetWord.forEach(char => spawnSpecificLetter(char));
+            
+            const extraBubblesCount = 12;
+            for(let i=0; i < extraBubblesCount; i++) {
+                spawnSpecificLetter(getRandomThaiChar());
+            }
         }
 
         function renderTargetDisplay() {
-            // Create a display string with _ for missing letters
             let displayHtml = '';
             for (let i = 0; i < targetWord.length; i++) {
                 if (i < collectedWord.length) {
-                    displayHtml += `<span style="color: #047857;">${collectedWord[i]}</span>`; // Filled
+                    displayHtml += `<div class="word-slot">${collectedWord[i]}</div>`; 
                 } else {
-                    displayHtml += `<span style="color: #9ca3af;">_</span>`; // Empty
+                    displayHtml += `<div class="word-slot empty">_</div>`; 
                 }
-                if(i < targetWord.length - 1) displayHtml += ' ';
             }
             targetWordDisplay.innerHTML = displayHtml;
         }
 
-        function renderCollectedSlots() {
-            collectedLettersContainer.innerHTML = '';
-            for (let i = 0; i < targetWord.length; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'collected-letter-slot';
-                if (i < collectedWord.length) {
-                    slot.textContent = collectedWord[i];
-                    slot.classList.add('filled');
-                }
-                collectedLettersContainer.appendChild(slot);
-            }
-        }
-
-        function spawnTargetLetters() {
-            // Guarantee that at least some letters of the target word are spawned immediately
-            targetWord.forEach(char => {
-                spawnSpecificLetter(char);
-            });
-        }
-
         function getRandomThaiChar() {
-            // 70% chance to spawn a character needed for the word to keep game moving
-            if (Math.random() > 0.3 && targetWord && collectedWord.length < targetWord.length) {
-                // Find next needed character
-                return targetWord[collectedWord.length];
-            }
-            // Otherwise random consonant or vowel
-            const source = Math.random() > 0.2 ? thaiConsonants : thaiVowels;
+            const source = Math.random() > 0.3 ? thaiConsonants : thaiVowels;
             return source[Math.floor(Math.random() * source.length)];
-        }
-
-        function spawnLetter() {
-            if (!isPlaying) return;
-            
-            // Limit max letters on screen for performance and clarity
-            if (arWorld.childElementCount > 15) {
-                // Remove oldest randomly
-                const letters = arWorld.children;
-                if(letters.length > 0) arWorld.removeChild(letters[0]);
-            }
-
-            const char = getRandomThaiChar();
-            spawnSpecificLetter(char);
         }
 
         function spawnSpecificLetter(char) {
@@ -520,222 +476,208 @@
             letterEl.className = 'floating-letter';
             letterEl.textContent = char;
 
-            // Random position (keep within bounds)
-            const size = 60;
-            const x = Math.random() * (window.innerWidth - size);
-            // Spawn mainly in the middle/upper area so UI doesn't block it too much
-            const y = Math.random() * (window.innerHeight - size - 200) + 50; 
+            const size = 80;
+            const playRect = playArea.getBoundingClientRect();
+            const arRect = arWorld.getBoundingClientRect();
+
+            const safeTop = playRect.top - arRect.top + 10;
+            const safeBottom = playRect.bottom - arRect.top - size - 10;
+            
+            const minX = 20;
+            const maxX = arRect.width - size - 20;
+
+            const x = Math.random() * (maxX - minX) + minX;
+            let y = safeTop;
+            if (safeBottom > safeTop) {
+                y = Math.random() * (safeBottom - safeTop) + safeTop;
+            } else {
+                y = (arRect.height / 2) + (Math.random() * 100 - 50);
+            }
 
             letterEl.style.left = `${x}px`;
             letterEl.style.top = `${y}px`;
-
-            // Randomize animation delays so they don't move in sync
-            letterEl.style.animationDelay = `${Math.random() * 2}s, ${Math.random() * 2}s`;
+            letterEl.style.animationDelay = `${Math.random() * 2}s`;
             
-            // Random slight rotation
-            letterEl.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+            let moved = false;
+            let startX, startY;
+            let initialLeft, initialTop;
 
-            // Handle Interaction (Click / Touch)
-            const handleInteract = (e) => {
-                e.preventDefault(); // Prevent double firing on touch devices
+            letterEl.addEventListener('pointerdown', (e) => {
                 if(letterEl.classList.contains('popping')) return;
+                e.preventDefault();
+                moved = false;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = parseFloat(letterEl.style.left) || x;
+                initialTop = parseFloat(letterEl.style.top) || y;
                 
-                checkLetter(char, letterEl);
-            };
+                letterEl.setPointerCapture(e.pointerId);
+                letterEl.style.animation = 'none';
+                letterEl.style.zIndex = '100';
+            });
 
-            letterEl.addEventListener('mousedown', handleInteract);
-            letterEl.addEventListener('touchstart', handleInteract, {passive: false});
+            letterEl.addEventListener('pointermove', (e) => {
+                if (!letterEl.hasPointerCapture(e.pointerId)) return;
+                
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
+                
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                    moved = true;
+                }
+                
+                if (moved) {
+                    letterEl.style.left = `${initialLeft + dx}px`;
+                    letterEl.style.top = `${initialTop + dy}px`;
+                }
+            });
+
+            letterEl.addEventListener('pointerup', (e) => {
+                if(letterEl.classList.contains('popping')) return;
+                letterEl.releasePointerCapture(e.pointerId);
+                letterEl.style.animation = '';
+                letterEl.style.zIndex = '';
+                
+                if (!moved) {
+                    playPopSound(); 
+                    checkLetter(char, letterEl);
+                }
+            });
 
             arWorld.appendChild(letterEl);
-
-            // Auto-remove after some time to refresh the board
-            setTimeout(() => {
-                if (letterEl.parentNode === arWorld && !letterEl.classList.contains('popping')) {
-                    // Fade out then remove
-                    letterEl.style.opacity = '0';
-                    letterEl.style.transition = 'opacity 0.5s';
-                    setTimeout(() => {
-                         if (letterEl.parentNode === arWorld) arWorld.removeChild(letterEl);
-                    }, 500);
-                }
-            }, 8000 + Math.random() * 4000); // 8-12 seconds lifetime
         }
 
         function checkLetter(char, element) {
-            // Add pop animation
-            element.classList.add('popping');
-            
-            // Remove from DOM after animation
-            setTimeout(() => {
-                if(element.parentNode === arWorld) arWorld.removeChild(element);
-            }, 400);
-
-            // Check if it's the right letter
             if (collectedWord.length < targetWord.length) {
                 const neededChar = targetWord[collectedWord.length];
+                const rect = element.getBoundingClientRect();
                 
                 if (char === neededChar) {
-                    // Correct letter!
+                    // ถ้าตอบถูก: ฟองสบู่จะแตกหายไป และเติมลงช่องคำตอบ
+                    element.classList.add('popping');
+                    setTimeout(() => {
+                        if(element.parentNode === arWorld) arWorld.removeChild(element);
+                    }, 200);
+
                     collectedWord += char;
                     score += 10;
                     updateScore();
                     renderTargetDisplay();
-                    renderCollectedSlots();
                     
-                    // Create floating text +10
-                    showFloatingText('+10', element.style.left, element.style.top, '#10b981');
+                    showFloatingText('+10', rect.left, rect.top, '#10B981');
 
-                    // Check if word is complete
                     if (collectedWord.length === targetWord.length) {
                         wordComplete();
                     }
                 } else {
-                    // Wrong letter penalty (optional, let's keep it simple and just show red text)
-                    showFloatingText('ผิด!', element.style.left, element.style.top, '#ef4444');
-                    // score = Math.max(0, score - 2); // Optional penalty
-                    // updateScore();
+                    // ถ้าตอบผิด: ฟองสบู่ไม่หายไป แสดงคำว่า "ผิด!" เตือนเฉยๆ
+                    showFloatingText('ผิด!', rect.left, rect.top, '#EF4444');
                 }
             }
         }
 
         function wordComplete() {
-            score += 50; // Bonus for completing word
+            score += 50; 
             updateScore();
             
-            // Visual feedback
-            targetWordDisplay.classList.add('word-success');
+            targetWordDisplay.style.transform = 'scale(1.15)';
+            targetWordDisplay.style.transition = 'transform 0.2s';
+            setTimeout(() => targetWordDisplay.style.transform = 'scale(1)', 300);
+            
+            playWinSound();
             fireConfetti();
             
+            // รีเซ็ตหน้าจอ เคลียร์คำตอบทั้งหมดบนจอแล้วขึ้นคำใหม่ทันที
             setTimeout(() => {
-                targetWordDisplay.classList.remove('word-success');
-                // Small delay before next word
-                setTimeout(loadNextWord, 500);
-            }, 1000);
+                loadNextWord();
+            }, 1200);
         }
 
         function showFloatingText(text, x, y, color) {
             const floater = document.createElement('div');
             floater.textContent = text;
             floater.style.position = 'absolute';
-            floater.style.left = x;
-            floater.style.top = y;
+            floater.style.left = `${x}px`;
+            floater.style.top = `${y}px`;
             floater.style.color = color;
-            floater.style.fontWeight = 'bold';
-            floater.style.fontSize = '2rem';
-            floater.style.textShadow = '1px 1px 2px black';
+            floater.style.fontWeight = '900';
+            floater.style.fontSize = '2.5rem';
+            floater.style.textShadow = '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white';
             floater.style.pointerEvents = 'none';
             floater.style.zIndex = '100';
-            floater.style.transition = 'all 1s ease-out';
+            floater.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
             
             document.body.appendChild(floater);
             
-            // Animate up and fade out
             setTimeout(() => {
-                floater.style.transform = 'translateY(-50px)';
+                floater.style.transform = 'translateY(-60px) scale(1.2)';
                 floater.style.opacity = '0';
-            }, 50);
+            }, 20);
             
             setTimeout(() => {
                 if(floater.parentNode) document.body.removeChild(floater);
-            }, 1000);
+            }, 800);
         }
 
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let musicPlaying = false;
+        let musicTimer = null;
 
+        function playNote(freq, duration, startTime, volume = 0.05, type="triangle") {
+            if(audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }
 
-// ===============================
-// 🎵 BGM - เกมล่าคำไทย
-// ===============================
+        function playPopSound() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            const now = audioCtx.currentTime;
+            playNote(600, 0.1, now, 0.1, "sine");
+            playNote(1000, 0.15, now + 0.02, 0.05, "sine");
+        }
+        
+        function playWinSound() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            const now = audioCtx.currentTime;
+            playNote(523.25, 0.1, now, 0.1, "square");
+            playNote(659.25, 0.1, now + 0.1, 0.1, "square");
+            playNote(783.99, 0.3, now + 0.2, 0.1, "square");
+        }
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function startMusic() {
+            if (musicPlaying) return;
+            musicPlaying = true;
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            playMelody();
+        }
 
-let musicPlaying = false;
-let musicTimer = null;
+        function playMelody() {
+            if (!musicPlaying) return;
+            const now = audioCtx.currentTime;
+            const melody = [
+                392.00, 523.25, 659.25, 523.25,
+                783.99, 659.25, 523.25, 392.00
+            ];
+            melody.forEach((note, i) => {
+                playNote(note, 0.3, now + i * 0.4, 0.02, "sine");
+            });
+            musicTimer = setTimeout(playMelody, 4000);
+        }
 
-function playNote(freq, duration, startTime, volume = 0.05) {
+        function stopMusic() {
+            musicPlaying = false;
+            if (musicTimer) { clearTimeout(musicTimer); musicTimer = null; }
+        }
 
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "triangle";
-    osc.frequency.value = freq;
-
-    gain.gain.setValueAtTime(0, startTime);
-    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        startTime + duration
-    );
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start(startTime);
-    osc.stop(startTime + duration);
-}
-
-function startMusic() {
-
-    if (musicPlaying) return;
-
-    musicPlaying = true;
-
-    if (audioCtx.state === "suspended") {
-        audioCtx.resume();
-    }
-
-    playMelody();
-}
-
-function playMelody() {
-
-    if (!musicPlaying) return;
-
-    const now = audioCtx.currentTime;
-
-    // 🎵 เกมล่าคำไทย
-    const melody = [
-        523.25, 587.33, 659.25, 783.99,
-        659.25, 587.33, 523.25, 440.00,
-
-        493.88, 587.33, 659.25, 698.46,
-        783.99, 659.25, 587.33, 523.25,
-
-        659.25, 783.99, 880.00, 783.99,
-        659.25, 587.33, 523.25, 659.25
-    ];
-
-    melody.forEach((note, i) => {
-
-        playNote(
-            note,
-            0.22,
-            now + i * 0.25,
-            0.045
-        );
-
-    });
-
-    musicTimer = setTimeout(() => {
-        playMelody();
-    }, 6000);
-}
-
-function stopMusic() {
-
-    musicPlaying = false;
-
-    if (musicTimer) {
-        clearTimeout(musicTimer);
-        musicTimer = null;
-    }
-}
-
-
-
-startMusic()
-
-
-        // Simple Confetti using Canvas
         function fireConfetti() {
             const canvas = document.getElementById('confetti-canvas');
             const ctx = canvas.getContext('2d');
@@ -743,18 +685,15 @@ startMusic()
             canvas.height = window.innerHeight;
             
             const particles = [];
-            const colors = ['#fcd34d', '#f87171', '#60a5fa', '#34d399', '#a78bfa'];
+            const colors = ['#FDE047', '#60A5FA', '#34D399', '#F472B6', '#FFFFFF'];
             
-            for(let i=0; i<50; i++) {
+            for(let i=0; i<80; i++) {
                 particles.push({
-                    x: canvas.width / 2,
-                    y: canvas.height / 2,
-                    vx: (Math.random() - 0.5) * 20,
-                    vy: (Math.random() - 1) * 20 - 5,
-                    size: Math.random() * 10 + 5,
+                    x: canvas.width / 2, y: canvas.height / 2 + 100,
+                    vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 1) * 30 - 5,
+                    size: Math.random() * 10 + 5, 
                     color: colors[Math.floor(Math.random() * colors.length)],
-                    rot: Math.random() * 360,
-                    rotSpeed: (Math.random() - 0.5) * 10
+                    rot: Math.random() * 360, rotSpeed: (Math.random() - 0.5) * 15
                 });
             }
             
@@ -764,9 +703,7 @@ startMusic()
                 let activeParticles = 0;
                 
                 particles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.5; // gravity
+                    p.x += p.vx; p.y += p.vy; p.vy += 1;
                     p.rot += p.rotSpeed;
                     
                     if (p.y < canvas.height) {
@@ -775,13 +712,15 @@ startMusic()
                         ctx.translate(p.x, p.y);
                         ctx.rotate(p.rot * Math.PI / 180);
                         ctx.fillStyle = p.color;
-                        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                        ctx.beginPath();
+                        ctx.arc(0, 0, p.size, 0, Math.PI * 2); 
+                        ctx.fill();
                         ctx.restore();
                     }
                 });
                 
                 frame++;
-                if (activeParticles > 0 && frame < 100) {
+                if (activeParticles > 0 && frame < 150) {
                     requestAnimationFrame(animateConfetti);
                 } else {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -790,9 +729,7 @@ startMusic()
             animateConfetti();
         }
 
-        // Initialize game events on load
         window.onload = initGame;
-
     </script>
 </body>
 </html>
