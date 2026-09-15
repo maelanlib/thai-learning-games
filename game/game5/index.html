@@ -821,13 +821,13 @@
                     const left = parseFloat(letterEl.style.left || letterEl.dataset.origX);
                     const top = parseFloat(letterEl.style.top || letterEl.dataset.origY);
                     
-                    // เช็คว่าตำแหน่งใหม่ที่ปล่อยนิ้ว ทับฟองอื่นหรือไม่
-                    if (!isOutOfBounds(left, top, letterEl) && !getOverlappingBubble(left, top, letterEl)) {
+                    // อนุญาตให้ฟองสบู่อยู่ตรงไหนก็ได้ ไม่ว่าทับกันหรือไม่ แต่อย่าให้ออกนอกขอบจอ
+                    if (!isOutOfBounds(left, top, letterEl)) {
                         // อัปเดตจุดเกิดใหม่ ให้ฟองสบู่ลอยพักไว้ตรงนี้ได้
                         letterEl.dataset.origX = `${left}px`;
                         letterEl.dataset.origY = `${top}px`;
                     } else {
-                        // ถ้าทับกัน ให้เด้งกลับไปที่เดิม
+                        // ถ้าตกขอบจอจริงๆ ให้เด้งกลับไปที่เดิม เพื่อไม่ให้หายไป
                         snapBackToOriginal(letterEl);
                     }
                 }
@@ -890,7 +890,7 @@
             }, 300);
         }
 
-        // ฟังก์ชันใหม่: เช็คว่าลากฟองสบู่ไปทะลุโจทย์ ทะลุช่องคำตอบ หรือออกนอกจอหรือไม่
+        // ฟังก์ชัน: เช็คว่าลากฟองสบู่ไปทะลุโจทย์ ทะลุช่องคำตอบ หรือออกนอกจอหรือไม่
         function isOutOfBounds(x, y, element) {
             const topUI = document.querySelector('.top-section').getBoundingClientRect();
             const bottomUI = document.querySelector('.bottom-section').getBoundingClientRect();
@@ -902,30 +902,10 @@
             return false;
         }
 
-        // ฟังก์ชันใหม่: เช็คว่าฟองสบู่ที่เรากำลังจะวาง ทับกับฟองสบู่อื่นๆ ในฉากหรือไม่
-        function getOverlappingBubble(x, y, currentBubble) {
-            const bubbles = document.querySelectorAll('.floating-letter');
-            const minDistance = (currentBubble.offsetWidth || 70) + 10; // ระยะปลอดภัย
-            const centerX1 = x + (currentBubble.offsetWidth || 70) / 2;
-            const centerY1 = y + (currentBubble.offsetHeight || 70) / 2;
-
-            for (let b of bubbles) {
-                if (b === currentBubble || b.classList.contains('popping')) continue;
-                
-                const bRect = b.getBoundingClientRect();
-                const centerX2 = bRect.left + bRect.width / 2;
-                const centerY2 = bRect.top + bRect.height / 2;
-                
-                const dx = centerX1 - centerX2;
-                const dy = centerY1 - centerY2;
-                
-                // หากระยะห่างน้อยกว่าที่กำหนด แสดงว่าทับกัน
-                if (Math.sqrt(dx*dx + dy*dy) < minDistance) {
-                    return true;
-                }
-            }
-            return false;
-        }
+        // ยกเลิกฟังก์ชันนี้ เนื่องจากเราต้องการให้วางฟองสบู่ตรงไหนก็ได้ ไม่สนใจการซ้อนทับ
+        // function getOverlappingBubble(x, y, currentBubble) {
+        //     ...
+        // }
 
         function wordComplete() {
             score += 50; 
