@@ -595,7 +595,22 @@
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
                 
-                checkDropTarget(grabbedElement.textContent, grabbedElement, centerX, centerY);
+                const handled = checkDropTarget(grabbedElement.textContent, grabbedElement, centerX, centerY);
+                
+                if (!handled) {
+                    const left = parseFloat(grabbedElement.style.left || grabbedElement.dataset.origX);
+                    const top = parseFloat(grabbedElement.style.top || grabbedElement.dataset.origY);
+                    
+                    // เช็คว่าตำแหน่งใหม่หลุดจอ หรือทับฟองอื่นหรือไม่
+                    if (!isOutOfBounds(left, top, grabbedElement) && !getOverlappingBubble(left, top, grabbedElement)) {
+                        // บันทึกตำแหน่งใหม่ ให้ฟองสบู่ลอยอยู่ตรงนี้
+                        grabbedElement.dataset.origX = `${left}px`;
+                        grabbedElement.dataset.origY = `${top}px`;
+                    } else {
+                        // ถ้าทับกัน หรือตกขอบ ให้เด้งกลับที่เดิม
+                        snapBackToOriginal(grabbedElement);
+                    }
+                }
                 
                 grabbedElement.classList.remove('grabbed');
                 grabbedElement = null;
@@ -800,7 +815,22 @@
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
                 
-                checkDropTarget(char, letterEl, centerX, centerY);
+                const handled = checkDropTarget(char, letterEl, centerX, centerY);
+                
+                if (!handled) {
+                    const left = parseFloat(letterEl.style.left || letterEl.dataset.origX);
+                    const top = parseFloat(letterEl.style.top || letterEl.dataset.origY);
+                    
+                    // เช็คว่าตำแหน่งใหม่ที่ปล่อยนิ้ว ทับฟองอื่นหรือไม่
+                    if (!isOutOfBounds(left, top, letterEl) && !getOverlappingBubble(left, top, letterEl)) {
+                        // อัปเดตจุดเกิดใหม่ ให้ฟองสบู่ลอยพักไว้ตรงนี้ได้
+                        letterEl.dataset.origX = `${left}px`;
+                        letterEl.dataset.origY = `${top}px`;
+                    } else {
+                        // ถ้าทับกัน ให้เด้งกลับไปที่เดิม
+                        snapBackToOriginal(letterEl);
+                    }
+                }
             });
 
             arWorld.appendChild(letterEl);
@@ -841,13 +871,13 @@
                     if (wordSlots.every(slot => slot.filled)) {
                         wordComplete();
                     }
+                    return true;
                 } else {
                     showFloatingText('ผิด!', dropX, dropY - 50, '#EF4444');
-                    snapBackToOriginal(element);
+                    return false;
                 }
-            } else {
-                snapBackToOriginal(element);
             }
+            return false;
         }
         
         function snapBackToOriginal(element) {
@@ -858,6 +888,43 @@
             setTimeout(() => {
                 element.style.transition = '';
             }, 300);
+        }
+
+        // ฟังก์ชันใหม่: เช็คว่าลากฟองสบู่ไปทะลุโจทย์ ทะลุช่องคำตอบ หรือออกนอกจอหรือไม่
+        function isOutOfBounds(x, y, element) {
+            const topUI = document.querySelector('.top-section').getBoundingClientRect();
+            const bottomUI = document.querySelector('.bottom-section').getBoundingClientRect();
+            const elWidth = element.offsetWidth || 70;
+            const elHeight = element.offsetHeight || 70;
+            
+            if (x < 10 || x + elWidth > window.innerWidth - 10) return true;
+            if (y < topUI.bottom + 10 || y + elHeight > bottomUI.top - 10) return true;
+            return false;
+        }
+
+        // ฟังก์ชันใหม่: เช็คว่าฟองสบู่ที่เรากำลังจะวาง ทับกับฟองสบู่อื่นๆ ในฉากหรือไม่
+        function getOverlappingBubble(x, y, currentBubble) {
+            const bubbles = document.querySelectorAll('.floating-letter');
+            const minDistance = (currentBubble.offsetWidth || 70) + 10; // ระยะปลอดภัย
+            const centerX1 = x + (currentBubble.offsetWidth || 70) / 2;
+            const centerY1 = y + (currentBubble.offsetHeight || 70) / 2;
+
+            for (let b of bubbles) {
+                if (b === currentBubble || b.classList.contains('popping')) continue;
+                
+                const bRect = b.getBoundingClientRect();
+                const centerX2 = bRect.left + bRect.width / 2;
+                const centerY2 = bRect.top + bRect.height / 2;
+                
+                const dx = centerX1 - centerX2;
+                const dy = centerY1 - centerY2;
+                
+                // หากระยะห่างน้อยกว่าที่กำหนด แสดงว่าทับกัน
+                if (Math.sqrt(dx*dx + dy*dy) < minDistance) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function wordComplete() {
