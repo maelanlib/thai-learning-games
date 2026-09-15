@@ -113,7 +113,7 @@
         }
     </style>
 </head>
-<body class="pb-32 flex flex-col items-center">
+<body class="pb-44 md:pb-36 flex flex-col items-center">
 
     <!-- พื้นหลังฟองอากาศ -->
     <div id="bg-bubbles" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
@@ -161,9 +161,9 @@
     </header>
 
     <!-- พื้นที่เล่นเกม (Game Board) -->
-    <main class="w-full max-w-5xl px-4 z-10 flex-grow mt-2">
+    <main class="w-full max-w-5xl mx-auto px-4 z-10 flex-grow mt-4 md:mt-10 flex items-start justify-center">
         <!-- CSS Grid -->
-        <div id="game-board" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 w-full">
+        <div id="game-board" class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 w-full max-w-3xl">
             <!-- จะถูกเติมด้วย JavaScript -->
         </div>
     </main>
@@ -185,7 +185,7 @@
         <div class="bg-white rounded-3xl p-8 max-w-sm w-[90%] text-center shadow-2xl">
             <div class="text-6xl mb-4 animate-float">🐠</div>
             <h1 class="text-2xl font-bold text-sky-600 mb-4">พร้อมหรือยัง?</h1>
-            <p class="text-gray-600 mb-6 text-lg">หนูมีเวลา <strong>3 นาที</strong><br>ในการเติมคำศัพท์ให้ถูกต้องมากที่สุด</p>
+            <p class="text-gray-600 mb-6 text-lg">หนูมีเวลา <strong>2 นาที</strong><br>ในการเติมคำศัพท์ให้ถูกต้องมากที่สุด</p>
             <button onclick="startGame()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform active:scale-95 text-xl">
                 เริ่มเกม 🎮
             </button>
@@ -269,10 +269,10 @@
         let wordsInRound = [];
         let solvedInRound = 0;
         let isGameOver = false;
-        const WORDS_PER_ROUND = 10;
+        const WORDS_PER_ROUND = 6;
         
         // ระบบเวลา
-        let timeLeft = 120; //////////// 2 นาที ปรับเวลาแก้ส่วนนี้
+        let timeLeft = 120; // 2 นาที
         let timerInterval = null;
 
         // ระบบเสียง
@@ -382,6 +382,7 @@
 
         // ควบคุมเกมหลัก
         function startGame() {
+		startMusic()
             initAudio();
             const startOverlay = document.getElementById('start-overlay');
             startOverlay.classList.add('opacity-0');
@@ -397,7 +398,7 @@
 
         function resetGameLogic() {
             totalScore = 0;
-            timeLeft = 180;
+            timeLeft = 120;
             isGameOver = false;
             
             document.getElementById('total-score-display').innerText = totalScore;
@@ -424,7 +425,7 @@
 
             wordsInRound.forEach((wordObj, index) => {
                 const bubble = document.createElement('div');
-                bubble.className = 'word-bubble flex items-center justify-center rounded-[2rem] h-24 md:h-32 text-2xl md:text-3xl font-bold text-gray-700 select-none relative animate-float';
+                bubble.className = 'word-bubble flex items-center justify-center rounded-[2rem] h-20 md:h-28 text-xl md:text-3xl font-bold text-gray-700 select-none relative animate-float';
                 bubble.style.animationDelay = `${Math.random() * 2}s`;
                 bubble.dataset.index = index;
                 bubble.dataset.answer = wordObj.a;
@@ -629,7 +630,7 @@
                     <div class="certificate">
                         <div class="stars">⭐⭐⭐⭐⭐</div>
                         <h1>เกียรติบัตรคนเก่ง</h1>
-                        <h2>เกมเติมคำควบกล้ำหรรษา (จับเวลา 3 นาที)</h2>
+                        <h2>เกมเติมคำควบกล้ำหรรษา (จับเวลา 2 นาที)</h2>
                         <p style="font-size: 24px; margin-top: 30px;">หนูทำได้ยอดเยี่ยมมาก! ตอบคำศัพท์ถูกต้องทั้งหมด</p>
                         <div class="score">${totalScore} คำ</div>
                         <p style="font-size: 20px;">เรียนรู้คำควบกล้ำ (ร, ล, ว) ได้อย่างคล่องแคล่ว</p>
@@ -735,7 +736,6 @@ function stopMusic() {
     }
 }
 
-startMusic()
 
     </script>
 </body>
